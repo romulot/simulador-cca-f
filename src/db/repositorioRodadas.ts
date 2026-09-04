@@ -35,6 +35,11 @@ export interface RodadaPersistida {
   estado: RodadaEstado;
   composicao: ComposicaoPersistida;
   status: "em_andamento" | "finalizada";
+  /** Quando a rodada foi criada (timestamp de parede — não confundir com
+   * `estado.inicioEm`, que é o mesmo instante só que na escala do relógio
+   * do domínio). Evita uma segunda consulta em quem só quer exibir "quando
+   * isso aconteceu" (ex.: histórico). */
+  iniciadaEm: Date;
 }
 
 export interface CriarRodadaParams {
@@ -255,6 +260,7 @@ export function carregarRodada(db: Database.Database, id: number): RodadaPersist
       deficit: linhaRodada.deficit_json ? JSON.parse(linhaRodada.deficit_json) : null,
     },
     status: linhaRodada.status,
+    iniciadaEm: new Date(linhaRodada.iniciada_em),
   };
 }
 

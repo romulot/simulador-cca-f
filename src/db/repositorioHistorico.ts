@@ -72,12 +72,9 @@ export function carregarEntradaHistorico(
 
   try {
     const p = placarDominio(persistida.estado, RELOGIO_INERTE);
-    const linha = db.prepare("SELECT iniciada_em FROM rodadas WHERE id = ?").get(id) as {
-      iniciada_em: string;
-    };
     return {
       id,
-      quando: new Date(linha.iniciada_em),
+      quando: persistida.iniciadaEm,
       modo: persistida.estado.modo,
       placar: p,
       esgotouTempo: persistida.estado.esgotouTempo,
