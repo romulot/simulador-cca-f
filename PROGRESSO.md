@@ -1,6 +1,8 @@
 # Progresso — Simulador CCA-F (web)
 
-Status em: 2026-09-04. Repositório: `/home/romulo/Documentos/git/simulador-cca-f/` (git local, ainda não enviado ao GitHub).
+**Status: PLANO COMPLETO (26/26 tarefas + 2 pré-requisitos não numerados).** Repositório: `/home/romulo/Documentos/git/simulador-cca-f/` (git local, ainda não enviado ao GitHub).
+
+Ver `PARIDADE.md` para o mapeamento regra de negócio → teste automatizado. `yarn build`, `yarn test` (98 testes) e `yarn test:e2e` (3 testes Playwright) passam limpos; `docker compose up -d --build` verificado manualmente do zero (ver Tarefas 23-24 abaixo para detalhes: usuário não-root, persistência do volume, `down -v` remove o histórico).
 
 Este documento existe para retomar o trabalho depois de uma pausa (ex.: orçamento de sessão esgotado). Descreve o que já está pronto e testado, e a ordem do que falta.
 
@@ -62,28 +64,30 @@ A rota `POST /api/rodadas` devolve a questão ao cliente só depois de sanitizad
 
 **Fase 6 concluída** com verificação real no navegador (Playwright): 2 bugs de UI encontrados e corrigidos (botões-link sublinhados; barra fixa da seleção renderizando fora de ordem) — ver commit `c138da2` para detalhes. `yarn test` (95 testes) e `yarn test:e2e` (3 testes Playwright) passam limpos.
 
-## O que falta (ordem do plano original)
+## Fase 7 — Docker e documentação (concluída)
 
-**Fase 5 — API (rotas Next.js)** — depende de 6 e 9
-- [ ] 11. `POST /api/rodadas` (criar rodada)
-- [ ] 12. Rotas de questão/navegação (autoridade do cronômetro no servidor)
-- [ ] 13. `POST .../encerrar`
-- [ ] 14. `GET /api/historico`
-- [ ] 15. Testes de rotas de API
+| # | Tarefa | Onde | Commit |
+|---|--------|------|--------|
+| 23 | Dockerfile multi-stage (deps/build/runtime, sem toolchain nativa — better-sqlite3 traz binário pré-compilado) | `Dockerfile`, `.dockerignore` | `eed469e` |
+| 24 | Docker Compose (volume nomeado, sem bind mount) | `docker-compose.yml` | `036f5e4` |
+| 25 | README | `README.md` | `7a2d7d7` |
+| 26 | Checklist final de paridade comportamental | `PARIDADE.md` | `70ebf8f` |
 
-**Fase 7 — Docker e documentação** — depende das fases anteriores
-- [ ] 23. Dockerfile multi-stage
-- [ ] 24. Docker Compose (volume nomeado para o `.db`, sem bind mount externo)
-- [ ] 25. README (uso via `docker compose up`, único pré-requisito é Docker)
-- [ ] 26. Checklist final de paridade comportamental (regra de negócio → teste correspondente)
+Testado manualmente e ponta a ponta (não só por leitura do compose file): `docker build`, `docker run` com usuário não-root escrevendo no volume, persistência do SQLite entre `docker compose down`/`up`, remoção do histórico com `down -v`, e uma subida do zero (`docker compose up -d --build`) simulando o que o README pede para um novo membro do time.
+
+## Status final
+
+**Nada do plano original ficou pendente** — as 26 tarefas mais os 2 pré-requisitos não numerados (módulo de catálogo, `GET /api/catalogo`) estão implementados, testados e commitados. `yarn build`, `yarn test` (98 testes) e `yarn test:e2e` (3 testes Playwright) passam limpos.
+
+Limitações conhecidas, não bloqueantes (detalhes em `PARIDADE.md`): sem auditoria formal de contraste WCAG; sem teste automatizado dedicado para "nunca só cor transmite estado" (só revisão manual, Tarefa 21); Docker não está num pipeline de CI (validação foi manual nesta sessão).
 
 ## Nota sobre orçamento e modo de execução
 
 O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais tokens do que o previsto para completar as 6 primeiras tarefas — em parte por 2 achados CRITICAL reais que exigiram ciclos extras de correção, e por retrabalhos MINOR. A partir da Tarefa 6, a execução passou para o modo `Single` (esta sessão, sem subagentes): eu implemento, rodo `yarn build`/`yarn test`, reviso o próprio diff e commito — sem os agentes separados de tester/reviewer/security-auditor. O usuário pediu explicitamente para eu pausar ao final de cada tarefa concluída e perguntar antes de seguir para a próxima, em vez de encadear tudo automaticamente.
 
-## Como retomar
+## Como retomar (se algo precisar ser revisitado)
 
-1. Ler este arquivo.
-2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com a tabela acima.
-3. Rodar `yarn install && yarn build && yarn test` para confirmar que nada regrediu.
-4. Continuar pela Tarefa 23 (Fase 7 — Docker e documentação), na ordem listada.
+1. Ler este arquivo e `PARIDADE.md`.
+2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com as tabelas acima.
+3. Rodar `yarn install && yarn build && yarn test && yarn test:e2e` para confirmar que nada regrediu.
+4. Para validar o Docker: `docker compose up -d --build`, testar, depois `docker compose down -v` para limpar.
