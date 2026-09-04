@@ -27,3 +27,7 @@ out/
 # misc
 .DS_Store
 *.log
+
+# fixtures temporárias de teste (parser.test.ts)
+content/simulados/_fixture-*
+*.tsbuildinfo
