@@ -28,19 +28,17 @@ Plano completo (26 tarefas, 7 fases) foi definido em modo `/crivo --full` (todas
 | 4 | Testes do parser (35 pares reais + casos de erro) | `src/lib/parser/parser.test.ts` | `486d0a7` |
 | 5 | Motor de sorteio ponderado do modo prova (cotas por maior resto, déficit nunca redistribuído) | `src/domain/sorteio.ts` | `3bb89f5` |
 | 8 | Schema SQLite + conexão + migração idempotente | `src/db/` | `3bb89f5` |
+| 6 | Motor de rodada (navegação sem wrap, tempo por visita, encerramento idempotente, placar com 2 denominadores) | `src/domain/rodada.ts` | `fcbe24f` |
+| 7 | Testes unitários de domínio | já coberto por `sorteio.test.ts` (10 testes) + `rodada.test.ts` (17 testes) | `fcbe24f` |
 
-Todas passaram pelos 4 portões (coder/tester/reviewer/security-auditor). Na Tarefa 3 apareceram **2 achados CRITICAL de segurança** (path traversal e bypass via symlink em `carregarPar()`), ambos corrigidos com aprovação explícita do usuário antes de prosseguir — ver `src/lib/parser/parser.ts`, função `validarDentroDoConteudo`. Também houve 3 retrabalhos MINOR menores (campo de metadado duplicado, erro de fs vazando, nome de diretório de fixture de teste colidindo com filtro de domínio) — todos corrigidos.
+Tarefas 1–5 e 8 passaram pelos 4 portões do modo `--full` (coder/tester/reviewer/security-auditor). Na Tarefa 3 apareceram **2 achados CRITICAL de segurança** (path traversal e bypass via symlink em `carregarPar()`), ambos corrigidos com aprovação explícita do usuário — ver `src/lib/parser/parser.ts`, função `validarDentroDoConteudo`. A partir da Tarefa 6, a execução passou para o **modo Single** (esta mesma sessão, sem subagentes) por restrição de orçamento — o usuário pediu para pausar após cada tarefa concluída e perguntar antes de seguir para a próxima.
 
-`yarn build` e `yarn test` (30 testes, 4 arquivos) passam limpos no estado atual do repositório.
+`yarn build` e `yarn test` (47 testes, 5 arquivos) passam limpos no estado atual do repositório.
 
 ## O que falta (ordem do plano original)
 
-**Fase 3 — Domínio (parcial)**
-- [ ] 6. Motor de rodada (`src/domain/rodada.ts`): navegação bidirecional sem wraparound, tempo por visita à questão, `encerrada()` como ato explícito, placar com dois denominadores. Depende de: 5 (pronto).
-- [ ] 7. Testes unitários de domínio (cobrindo 5 e 6 juntos, se ainda não estiver coberto o suficiente).
-
 **Fase 4 — Persistência (parcial)**
-- [ ] 9. Repositório de acesso a dados (`src/db/repositorioRodadas.ts`, `repositorioHistorico.ts`) — grava rodada/snapshot, histórico recalcula estatística na leitura (nunca persistida). Depende de: 8 (pronto), 3 (pronto), 6.
+- [ ] 9. Repositório de acesso a dados (`src/db/repositorioRodadas.ts`, `repositorioHistorico.ts`) — grava rodada/snapshot, histórico recalcula estatística na leitura (nunca persistida). Depende de: 8 (pronto), 3 (pronto), 6 (pronto).
 - [ ] 10. Testes de persistência.
 
 **Fase 5 — API (rotas Next.js)** — depende de 6 e 9
@@ -63,11 +61,11 @@ Todas passaram pelos 4 portões (coder/tester/reviewer/security-auditor). Na Tar
 
 ## Nota sobre orçamento e modo de execução
 
-O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais tokens do que o previsto para completar só 6 das 26 tarefas — em parte por 2 achados CRITICAL reais que exigiram ciclos extras de correção, e por retrabalhos MINOR. Ao retomar, considerar rodar o restante em modo `Single` (mesma sessão, sem os 4 agentes separados por tarefa) para caber melhor no orçamento, mantendo o mesmo rigor de teste/build a cada passo — essa foi a direção acertada com o usuário na sessão anterior, mas a execução foi pausada antes de trocar de modo.
+O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais tokens do que o previsto para completar as 6 primeiras tarefas — em parte por 2 achados CRITICAL reais que exigiram ciclos extras de correção, e por retrabalhos MINOR. A partir da Tarefa 6, a execução passou para o modo `Single` (esta sessão, sem subagentes): eu implemento, rodo `yarn build`/`yarn test`, reviso o próprio diff e commito — sem os agentes separados de tester/reviewer/security-auditor. O usuário pediu explicitamente para eu pausar ao final de cada tarefa concluída e perguntar antes de seguir para a próxima, em vez de encadear tudo automaticamente.
 
 ## Como retomar
 
 1. Ler este arquivo.
 2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com a tabela acima.
 3. Rodar `yarn install && yarn build && yarn test` para confirmar que nada regrediu.
-4. Continuar pela Tarefa 6, na ordem listada.
+4. Continuar pela Tarefa 9, na ordem listada — perguntando ao usuário antes de cada nova tarefa, conforme pedido.
