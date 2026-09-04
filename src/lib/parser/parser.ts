@@ -34,7 +34,9 @@ const ANSWER = /Resposta correta:\s*\*\*([A-D])\*\*/;
 // Explicação por alternativa: "- **A — errada:** texto" / "- **C — correta.**"
 const EXPL = /^-\s*\*\*([A-D]) — (errada|correta)[:.]\*\*\s*(.*)$/;
 // Nome de diretório de domínio, para derivar o rótulo do caminho (spec §3).
-const DOMINIO_RE = /^dominio-(\d+)$/;
+// Exportado: `src/lib/catalogo/index.ts` reaproveita para o mesmo fim
+// (grupo/ordem de um `Par`), em vez de duplicar o mesmo padrão.
+export const DOMINIO_RE = /^dominio-(\d+)$/;
 // Início do bloco de metadados de revisão do gabarito.
 const METADADOS_MARCADOR = /^\*\*Metadados\b/;
 // Campo do bloco de metadados: "- Bloom: Aplicar" / "- Rubrica (§3): ...".
