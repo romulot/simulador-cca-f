@@ -95,6 +95,7 @@ export default function Menu() {
             href="/selecao"
             className={`botao botao-primario botao-bloco${semConteudo ? " botao-desabilitado" : ""}`}
             aria-disabled={semConteudo}
+            tabIndex={semConteudo ? -1 : undefined}
             onClick={(e) => semConteudo && e.preventDefault()}
           >
             Praticar
@@ -132,6 +133,7 @@ export default function Menu() {
             href="/historico"
             className={`botao botao-bloco${totalRodadas === 0 ? " botao-desabilitado" : ""}`}
             aria-disabled={totalRodadas === 0}
+            tabIndex={totalRodadas === 0 ? -1 : undefined}
             onClick={(e) => totalRodadas === 0 && e.preventDefault()}
           >
             Histórico
