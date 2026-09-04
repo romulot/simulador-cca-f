@@ -21,7 +21,10 @@ CREATE TABLE IF NOT EXISTS rodadas (
   modo TEXT NOT NULL CHECK (modo IN ('pratica', 'prova')),
   iniciada_em TEXT NOT NULL,
   limite_segundos INTEGER,
-  decorrido_segundos INTEGER,
+  -- REAL (não INTEGER): `decorrido()` no domínio (src/domain/rodada.ts) é a
+  -- diferença entre dois timestamps de ponto flutuante: truncar pra inteiro
+  -- aqui perderia precisão sem necessidade.
+  decorrido_segundos REAL,
   esgotou_tempo INTEGER NOT NULL DEFAULT 0 CHECK (esgotou_tempo IN (0, 1)),
   status TEXT NOT NULL CHECK (status IN ('em_andamento', 'finalizada')),
   indice_atual INTEGER NOT NULL DEFAULT 0,
@@ -53,7 +56,8 @@ CREATE TABLE IF NOT EXISTS questoes_rodada (
   cenario TEXT NOT NULL,
   principio_testado TEXT NOT NULL,
   resposta TEXT CHECK (resposta IN ('A', 'B', 'C', 'D')),
-  segundos INTEGER
+  -- REAL pelo mesmo motivo de `rodadas.decorrido_segundos` acima.
+  segundos REAL NOT NULL DEFAULT 0
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_questoes_rodada_rodada_posicao
