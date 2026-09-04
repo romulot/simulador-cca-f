@@ -256,6 +256,41 @@ describe("placar — dois denominadores", () => {
   });
 });
 
+describe("responder() funciona numa rodada reconstruída sem marcaEm vivo", () => {
+  it("responder grava a resposta mesmo com marcaEm=null, desde que inicioEm esteja setado", () => {
+    // Simula o que `repositorioRodadas.carregarRodada` produz para uma
+    // rodada em andamento reconstruída entre requisições HTTP: inicioEm
+    // vem de `iniciada_em` persistido, mas não há cronômetro "vivo" em
+    // processo (marcaEm=null). Sem a correção do guard em `responder()`
+    // (que checava `marcaEm===null`), esta chamada seria um no-op — a API
+    // nunca gravaria resposta nenhuma.
+    const questoes = [questaoFake(1, "A"), questaoFake(2, "B")];
+    const estado: ReturnType<typeof criarRodada> = {
+      ...criarRodada(questoes, { embaralhar: false }),
+      inicioEm: 1000,
+      marcaEm: null,
+      fimEm: null,
+    };
+    const relogio: Relogio = () => 1010;
+
+    const depois = responder(estado, "A", relogio);
+
+    expect(depois.respostas[0]).toBe("A");
+    expect(depois.indice).toBe(1);
+  });
+
+  it("responder continua no-op quando inicioEm é null (iniciar() nunca chamado)", () => {
+    const questoes = [questaoFake(1)];
+    const estado = criarRodada(questoes, { embaralhar: false }); // sem iniciar()
+    const relogio: Relogio = () => 5;
+
+    const depois = responder(estado, "A", relogio);
+
+    expect(depois).toBe(estado); // no-op real
+    expect(depois.respostas[0]).toBeNull();
+  });
+});
+
 describe("restaurarFinalizada", () => {
   it("reconstrói uma rodada encerrada cujo decorrido nunca consulta o relógio de novo", () => {
     const questoes = [questaoFake(1, "A"), questaoFake(2, "B")];

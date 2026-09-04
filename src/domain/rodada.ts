@@ -206,9 +206,17 @@ export function emBranco(estado: RodadaEstado): number[] {
 }
 
 /** Grava (ou sobrescreve) a resposta da questão atual e avança. No-op se a
- * rodada já encerrou ou se o cronômetro nunca foi iniciado. */
+ * rodada já encerrou ou se o cronômetro nunca foi iniciado.
+ *
+ * O guard é `inicioEm === null` (nunca `marcaEm`, de propósito): `inicioEm`
+ * é o sinal verdadeiro de "iniciar() nunca foi chamado". `marcaEm` pode ser
+ * `null` mesmo numa rodada perfeitamente iniciada e em andamento — é o caso
+ * de uma rodada reconstruída do banco entre requisições HTTP, onde não há
+ * cronômetro "vivo" em processo (ver `repositorioRodadas.carregarRodada`).
+ * Usar `marcaEm` aqui faria a API de responder nunca gravar nada.
+ */
 export function responder(estado: RodadaEstado, letra: Letra, relogio: Relogio): RodadaEstado {
-  if (encerrada(estado, relogio) || estado.marcaEm === null) return estado;
+  if (encerrada(estado, relogio) || estado.inicioEm === null) return estado;
   const respostas = [...estado.respostas];
   respostas[estado.indice] = letra;
   return avancar({ ...estado, respostas }, relogio);
