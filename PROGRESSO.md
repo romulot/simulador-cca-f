@@ -32,12 +32,18 @@ Plano completo (26 tarefas, 7 fases) foi definido em modo `/crivo --full` (todas
 | 7 | Testes unitários de domínio | já coberto por `sorteio.test.ts` (10 testes) + `rodada.test.ts` (17 testes) | `fcbe24f` |
 | 9 | Repositório de acesso a dados (rodadas + histórico) | `src/db/repositorioRodadas.ts`, `src/db/repositorioHistorico.ts` | `6c17e18` |
 | 10 | Testes de persistência | já coberto por `repositorioRodadas.test.ts` (6 testes) + `repositorioHistorico.test.ts` (6 testes) | `6c17e18` |
+| — | **Catálogo** (não numerado no plano original, pré-requisito descoberto ao implementar a Tarefa 11) | `src/lib/catalogo/index.ts` | `8fc0928` |
+| 11 | `POST /api/rodadas` (criar rodada prática/prova) | `src/app/api/rodadas/route.ts`, `src/lib/api/questaoCliente.ts` | `08034fb` |
 
 Tarefas 1–5 e 8 passaram pelos 4 portões do modo `--full` (coder/tester/reviewer/security-auditor). Na Tarefa 3 apareceram **2 achados CRITICAL de segurança** (path traversal e bypass via symlink em `carregarPar()`), ambos corrigidos com aprovação explícita do usuário — ver `src/lib/parser/parser.ts`, função `validarDentroDoConteudo`. A partir da Tarefa 6, a execução passou para o **modo Single** (esta mesma sessão, sem subagentes) por restrição de orçamento — o usuário pediu para pausar após cada tarefa concluída e perguntar antes de seguir para a próxima.
 
 Na Tarefa 9 surgiram 2 correções em código já aprovado, encontradas ao implementar: `schema.sql` tinha `decorrido_segundos`/`segundos` como `INTEGER` (truncava a precisão de ponto flutuante do domínio — corrigido para `REAL`); e `vitest.config.mts` nunca teve o alias `@/` configurado (só não tinha quebrado ainda porque todo import cruzado anterior era `import type`, apagado em build — corrigido com `resolve.alias` espelhando `tsconfig.json`).
 
-`yarn build` e `yarn test` (58 testes, 7 arquivos) passam limpos no estado atual do repositório.
+O plano original (replanejado para `--full`) pulou uma peça que a Tarefa 11 precisa: descoberta/catálogo de pares (equivalente a `catalogo.py`). Implementei como pré-requisito não numerado, documentado na tabela acima.
+
+A rota `POST /api/rodadas` devolve a questão ao cliente só depois de sanitizada (`paraQuestaoCliente`) — nunca a resposta certa, explicação ou metadados antes de responder. Isso é um ponto de atenção a manter nas próximas rotas (Tarefas 12-14): sempre passar por esse helper, nunca devolver o objeto `Questao` bruto do domínio para o cliente.
+
+`yarn build` e `yarn test` (70 testes, 9 arquivos) passam limpos no estado atual do repositório.
 
 ## O que falta (ordem do plano original)
 
@@ -68,4 +74,4 @@ O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais toke
 1. Ler este arquivo.
 2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com a tabela acima.
 3. Rodar `yarn install && yarn build && yarn test` para confirmar que nada regrediu.
-4. Continuar pela Tarefa 11 (Fase 5 — rotas de API), na ordem listada — perguntando ao usuário antes de cada nova tarefa, conforme pedido.
+4. Continuar pela Tarefa 12 (rotas de questão/navegação), na ordem listada — perguntando ao usuário antes de cada nova tarefa, conforme pedido.
