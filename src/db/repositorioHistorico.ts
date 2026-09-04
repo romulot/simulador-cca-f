@@ -11,7 +11,7 @@
  */
 import type Database from "better-sqlite3";
 
-import { placar as placarDominio, type Modo, type Placar } from "@/domain/rodada";
+import { placar as placarDominio, relogioInerte, type Modo, type Placar } from "@/domain/rodada";
 import { carregarRodada } from "./repositorioRodadas";
 
 /** Uma linha do histórico — abrível ou não. */
@@ -28,17 +28,6 @@ export interface EntradaHistorico {
   /** Motivo de a entrada não ser abrível; `null` quando está tudo certo. */
   erro: string | null;
 }
-
-/** Relógio "morto": rodadas finalizadas nunca chamam o relógio de volta
- * (`decorrido()`/`esgotado()` já estão congelados por `restaurarFinalizada`
- * dentro de `carregarRodada`) — isto é só para satisfazer a assinatura de
- * `placar()`, nunca é de fato invocado no caminho de uma rodada válida. */
-const RELOGIO_INERTE = () => {
-  throw new Error(
-    "relógio não deveria ser consultado para uma rodada finalizada — " +
-      "decorrido()/esgotado() já estão congelados por restaurarFinalizada",
-  );
-};
 
 function origensDistintas(origens: string[]): string[] {
   return [...new Set(origens)].sort();
@@ -71,7 +60,7 @@ export function carregarEntradaHistorico(
   }
 
   try {
-    const p = placarDominio(persistida.estado, RELOGIO_INERTE);
+    const p = placarDominio(persistida.estado, relogioInerte());
     return {
       id,
       quando: persistida.iniciadaEm,

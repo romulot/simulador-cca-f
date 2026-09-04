@@ -31,6 +31,21 @@ export function relogioPadrao(): Relogio {
   return () => Date.now() / 1000;
 }
 
+/** Relógio para usar com uma `RodadaEstado` que já tem `fimEm !== null`
+ * (uma rodada finalizada) — nenhuma função de domínio consulta o relógio
+ * de novo nesse caso (`decorrido()`/`esgotado()` já leem `fimEm`
+ * diretamente). Lança se for chamado mesmo assim, para que um uso indevido
+ * apareça como erro com stack trace claro, em vez de silenciosamente ler
+ * `Date.now()` e mascarar o bug de quem esqueceu de restaurar a rodada
+ * como finalizada antes de calcular o placar. */
+export function relogioInerte(): Relogio {
+  return () => {
+    throw new Error(
+      "relogioInerte: não deveria ser consultado — só use com uma RodadaEstado já finalizada (fimEm !== null)",
+    );
+  };
+}
+
 export interface RodadaEstado {
   questoes: Questao[];
   respostas: (Letra | null)[];
