@@ -199,7 +199,21 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
+  text-decoration: none;
   transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+/* `.botao` também é usado em <Link>/<a> (menu, seleção, histórico) — sem
+ * isto, o reset `a { color }` global venceria por especificidade em
+ * qualquer trecho de texto sem classe própria dentro do botão. */
+.botao,
+.botao:visited {
+  color: var(--papel);
+}
+
+.botao-primario,
+.botao-primario:visited {
+  color: var(--acento-texto);
 }
 
 .botao:hover:not(:disabled) {
@@ -218,7 +232,6 @@ a {
 .botao-primario {
   background: var(--acento);
   border-color: var(--acento);
-  color: var(--acento-texto);
 }
 
 .botao-primario:hover:not(:disabled) {

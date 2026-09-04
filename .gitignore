@@ -32,3 +32,9 @@ data/
 # fixtures temporárias de teste (parser.test.ts)
 content/simulados/_fixture-*
 *.tsbuildinfo
+
+# playwright (e2e)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

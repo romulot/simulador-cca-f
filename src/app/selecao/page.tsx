@@ -144,7 +144,7 @@ export default function Selecao() {
           );
         })}
 
-        <div className="painel espaco-entre" style={{ position: "sticky", bottom: "1rem" }}>
+        <div className="painel espaco-entre">
           <span className="mono">
             {selecionados.size} simulados selecionados · {totalQuestoesSelecionadas} questões
           </span>

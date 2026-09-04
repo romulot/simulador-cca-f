@@ -64,6 +64,15 @@ export default function TelaRodada() {
   const [confirmandoFim, setConfirmandoFim] = useState(false);
   const mostradaEm = useRef<number>(Date.now());
   const finalizandoPorTempo = useRef(false);
+  const confirmacaoRef = useRef<HTMLDivElement>(null);
+  const botaoFinalizarRef = useRef<HTMLButtonElement>(null);
+
+  // Move o foco para o painel de confirmação quando ele aparece — sem
+  // isto, alguém usando leitor de tela não teria como notar que a
+  // confirmação surgiu (o foco continuaria no botão "Finalizar rodada").
+  useEffect(() => {
+    if (confirmandoFim) confirmacaoRef.current?.focus();
+  }, [confirmandoFim]);
 
   const carregar = useCallback(async () => {
     const resposta = await fetch(`/api/rodadas/${id}`);
@@ -146,7 +155,14 @@ export default function TelaRodada() {
   // TUI original, além dos botões (sempre acessíveis por si só via Tab).
   useEffect(() => {
     function aoTeclar(e: KeyboardEvent) {
-      if (!estado || enviando || confirmandoFim) return;
+      if (confirmandoFim) {
+        if (e.key === "Escape") {
+          setConfirmandoFim(false);
+          botaoFinalizarRef.current?.focus();
+        }
+        return;
+      }
+      if (!estado || enviando) return;
       const letra = e.key.toUpperCase();
       if (LETRAS.includes(letra as Letra)) {
         enviarAcao({ resposta: letra as Letra });
@@ -269,6 +285,7 @@ export default function TelaRodada() {
 
         <button
           type="button"
+          ref={botaoFinalizarRef}
           className="botao botao-bloco"
           style={{ borderColor: "var(--erro)" }}
           onClick={() => setConfirmandoFim(true)}
@@ -277,7 +294,13 @@ export default function TelaRodada() {
         </button>
 
         {confirmandoFim && (
-          <div className="painel pilha" role="alertdialog" aria-labelledby="confirmar-titulo">
+          <div
+            className="painel pilha"
+            role="alertdialog"
+            aria-labelledby="confirmar-titulo"
+            ref={confirmacaoRef}
+            tabIndex={-1}
+          >
             <h2 id="confirmar-titulo" style={{ fontSize: "1rem" }}>
               {emBranco.length > 0
                 ? `${emBranco.length} questão(ões) em branco: ${emBranco.join(", ")}. Finalizar mesmo assim?`
@@ -287,7 +310,14 @@ export default function TelaRodada() {
               <button type="button" className="botao botao-primario" onClick={finalizar}>
                 Sim, finalizar
               </button>
-              <button type="button" className="botao" onClick={() => setConfirmandoFim(false)}>
+              <button
+                type="button"
+                className="botao"
+                onClick={() => {
+                  setConfirmandoFim(false);
+                  botaoFinalizarRef.current?.focus();
+                }}
+              >
                 Cancelar
               </button>
             </div>

@@ -27,5 +27,10 @@ export default defineConfig({
     // eliminando a corrida sem precisar mudar nenhum comportamento de
     // produção.
     fileParallelism: false,
+    // e2e/ é Playwright (yarn test:e2e), não Vitest — sem isto, o glob
+    // padrão de "*.spec.ts" do Vitest tentava rodar os specs do Playwright
+    // também, e `test()` do Playwright não é compatível com o runner do
+    // Vitest.
+    exclude: ["**/node_modules/**", "e2e/**"],
   },
 });
