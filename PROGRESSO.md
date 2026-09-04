@@ -34,6 +34,10 @@ Plano completo (26 tarefas, 7 fases) foi definido em modo `/crivo --full` (todas
 | 10 | Testes de persistência | já coberto por `repositorioRodadas.test.ts` (6 testes) + `repositorioHistorico.test.ts` (6 testes) | `6c17e18` |
 | — | **Catálogo** (não numerado no plano original, pré-requisito descoberto ao implementar a Tarefa 11) | `src/lib/catalogo/index.ts` | `8fc0928` |
 | 11 | `POST /api/rodadas` (criar rodada prática/prova) | `src/app/api/rodadas/route.ts`, `src/lib/api/questaoCliente.ts` | `08034fb` |
+| 12 | `GET /api/rodadas/:id` (retomar) + `GET`/`POST /api/rodadas/:id/questoes/:indice` (navegar/responder) | `src/app/api/rodadas/[id]/route.ts`, `.../questoes/[indice]/route.ts` | `dcf74ec` |
+| 13 | `POST /api/rodadas/:id/encerrar` | `src/app/api/rodadas/[id]/encerrar/route.ts`, `src/lib/api/detalheRodada.ts` | `e85838e` |
+| 14 | `GET /api/historico` + `GET /api/historico/:id` | `src/app/api/historico/route.ts`, `.../[id]/route.ts` | `4aee84c` |
+| 15 | Testes de rotas de API | já coberto: teste dedicado ao lado de cada rota (94 testes no total ao final da Fase 5) | `4aee84c` |
 
 Tarefas 1–5 e 8 passaram pelos 4 portões do modo `--full` (coder/tester/reviewer/security-auditor). Na Tarefa 3 apareceram **2 achados CRITICAL de segurança** (path traversal e bypass via symlink em `carregarPar()`), ambos corrigidos com aprovação explícita do usuário — ver `src/lib/parser/parser.ts`, função `validarDentroDoConteudo`. A partir da Tarefa 6, a execução passou para o **modo Single** (esta mesma sessão, sem subagentes) por restrição de orçamento — o usuário pediu para pausar após cada tarefa concluída e perguntar antes de seguir para a próxima.
 
@@ -41,9 +45,15 @@ Na Tarefa 9 surgiram 2 correções em código já aprovado, encontradas ao imple
 
 O plano original (replanejado para `--full`) pulou uma peça que a Tarefa 11 precisa: descoberta/catálogo de pares (equivalente a `catalogo.py`). Implementei como pré-requisito não numerado, documentado na tabela acima.
 
-A rota `POST /api/rodadas` devolve a questão ao cliente só depois de sanitizada (`paraQuestaoCliente`) — nunca a resposta certa, explicação ou metadados antes de responder. Isso é um ponto de atenção a manter nas próximas rotas (Tarefas 12-14): sempre passar por esse helper, nunca devolver o objeto `Questao` bruto do domínio para o cliente.
+A rota `POST /api/rodadas` devolve a questão ao cliente só depois de sanitizada (`paraQuestaoCliente`) — nunca a resposta certa, explicação ou metadados antes de responder. As rotas de histórico/encerrar usam o helper simétrico `montarDetalheRodada` (`src/lib/api/detalheRodada.ts`), que só pode ser chamado para uma rodada `finalizada` — nunca para uma em andamento.
 
-`yarn build` e `yarn test` (70 testes, 9 arquivos) passam limpos no estado atual do repositório.
+**Bugs reais encontrados e corrigidos durante a Fase 5** (todos com teste que trava a correção):
+- `responder()` (Tarefa 6) checava `marcaEm === null` como guarda de "cronômetro nunca iniciado" — mas uma rodada recarregada do banco entre requisições HTTP tem `marcaEm=null` de propósito (sem cronômetro vivo em processo). Isso fazia toda resposta via API ser silenciosamente ignorada. Corrigido para checar `inicioEm === null`, que é o sinal verdadeiro.
+- Corrida de teste real (não só flakiness): `catalogo/index.test.ts` varre `content/simulados/` inteiro; `parser.test.ts` cria/remove sua própria fixture na mesma árvore (obrigatório — a guarda de path traversal da Tarefa 3 só aceita caminhos dentro de `content/simulados/`). Rodando em paralelo (padrão do Vitest), a varredura do catálogo ocasionalmente pegava a fixture do parser pela metade. Corrigido com `fileParallelism: false` no `vitest.config.mts`.
+
+**Decisão de design registrada**: o domínio (`rodada.ts`) não tem cronômetro "vivo" entre requisições HTTP — cada chamada de API é um processo sem memória da anterior. Por isso, `segundosGastos` (quanto tempo o candidato passou numa questão) é sempre REPORTADO PELO CLIENTE e acumulado pela própria rota (não pelo `registrarTempo` interno do domínio, que só soma tempo dentro de uma única chamada com relógio contínuo). Já se a PROVA acabou (por tempo) é sempre recomputado no servidor a partir de `iniciada_em` — o cliente nunca decide isso; toda rota de mutação rejeita com 409 se `encerrada()` já for `true`.
+
+`yarn build` e `yarn test` (94 testes, 13 arquivos) passam limpos no estado atual do repositório.
 
 ## O que falta (ordem do plano original)
 
@@ -74,4 +84,4 @@ O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais toke
 1. Ler este arquivo.
 2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com a tabela acima.
 3. Rodar `yarn install && yarn build && yarn test` para confirmar que nada regrediu.
-4. Continuar pela Tarefa 12 (rotas de questão/navegação), na ordem listada — perguntando ao usuário antes de cada nova tarefa, conforme pedido.
+4. Continuar pela Tarefa 16 (Fase 6 — telas), na ordem listada. A partir deste ponto o usuário pediu para seguir todas as etapas sem pausar para confirmação a cada tarefa.
