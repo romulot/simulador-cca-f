@@ -64,6 +64,13 @@ test("menu → praticar → responder → finalizar → resultado → histórico
     await expect(page.getByText(/\d+\/\d+/).first()).toBeVisible();
   });
 
+  await test.step("cita o corte oficial (720/1000) sem convertê-lo", async () => {
+    // Regra de negócio preservada da TUI original: a taxa bruta de acerto
+    // nunca vira uma nota na escala 720/1000 — só a referência é citada.
+    await expect(page.getByText(/720\/1000/)).toBeVisible();
+    await expect(page.getByText(/sem conversão/)).toBeVisible();
+  });
+
   await test.step("histórico lista a rodada recém-finalizada", async () => {
     await page.getByRole("link", { name: "← Menu" }).click();
     await page.getByRole("link", { name: /Histórico/ }).click();

@@ -1,14 +1,64 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import {
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { carregarPar, parseGabarito, parseSimulado } from "./parser";
 import { FormatoInvalido } from "./erros";
 
+// Compartilhados por vários describes abaixo (parsing em memória sempre
+// usa arquivos de fixture reais, porque `carregarPar` exige caminho
+// dentro de content/simulados/ — ver a guarda de path traversal).
+const baseDir = join(process.cwd(), "content/simulados");
+
+const templateSimulado = (questoes: string) => `# Simulado — Teste
+
+${questoes}`;
+
+const templateGabarito = (questoes: string) => `# Gabarito — Teste
+
+${questoes}`;
+
+const questaoSimuladoValida = (numero: number) => `
+## Q${numero}
+
+Pergunta de teste ${numero}?
+
+- **A)** Alternativa A
+- **B)** Alternativa B
+- **C)** Alternativa C
+- **D)** Alternativa D
+`;
+
+const questaoGabaritoValida = (numero: number) => `
+## Q${numero} — Resposta correta: **A** · (1.0)
+
+Resposta para a questão ${numero}.
+
+- **A — correta:**
+- **B — errada:** Porque não é B
+- **C — errada:** Porque não é C
+- **D — errada:** Porque não é D
+
+**Metadados (revisão; não exibir ao candidato):**
+- Bloom: Lembrar
+- Dificuldade: Fácil
+- Rubrica (§1): 2 = Bloom 1 + distratores 1
+- Cenário: S1 — Test
+- Princípio testado (§1): teste
+`;
+
 describe("parser", () => {
   describe("corpus real (35 pares simulado/gabarito)", () => {
     it("parseia todos os 35 pares sem erro, produzindo 240 questões com 5 campos de metadados", () => {
-      const baseDir = join(process.cwd(), "content/simulados");
       const dominios = readdirSync(baseDir).filter((d) =>
         d.startsWith("dominio-"),
       );
@@ -340,45 +390,7 @@ Esta é uma questão de exemplo.
   });
 
   describe("carregarPar — casos de erro com contagem e numeração", () => {
-    const baseDir = join(process.cwd(), "content/simulados");
     const testDir = join(baseDir, "_fixture-carregarpar");
-
-    const templateSimulado = (questoes: string) => `# Simulado — Teste
-
-${questoes}`;
-
-    const templateGabarito = (questoes: string) => `# Gabarito — Teste
-
-${questoes}`;
-
-    const questaoSimuladoValida = (numero: number) => `
-## Q${numero}
-
-Pergunta de teste ${numero}?
-
-- **A)** Alternativa A
-- **B)** Alternativa B
-- **C)** Alternativa C
-- **D)** Alternativa D
-`;
-
-    const questaoGabaritoValida = (numero: number) => `
-## Q${numero} — Resposta correta: **A** · (1.0)
-
-Resposta para a questão ${numero}.
-
-- **A — correta:**
-- **B — errada:** Porque não é B
-- **C — errada:** Porque não é C
-- **D — errada:** Porque não é D
-
-**Metadados (revisão; não exibir ao candidato):**
-- Bloom: Lembrar
-- Dificuldade: Fácil
-- Rubrica (§1): 2 = Bloom 1 + distratores 1
-- Cenário: S1 — Test
-- Princípio testado (§1): teste
-`;
 
     beforeEach(() => {
       // Cria diretório de teste
@@ -519,6 +531,52 @@ Resposta para a questão ${numero}.
       expect(questoes[1].origem).toBe("teste4");
       expect(questoes[1].enunciado).toContain("Pergunta de teste 2");
       expect(questoes[1].correta).toBe("A");
+    });
+  });
+
+  describe("carregarPar — guarda contra path traversal (correção CRITICAL da Tarefa 3)", () => {
+    let dirFora: string | undefined;
+    const dirFixture = join(baseDir, "_fixture-seguranca");
+
+    afterEach(() => {
+      rmSync(dirFixture, { recursive: true, force: true });
+      if (dirFora) rmSync(dirFora, { recursive: true, force: true });
+      dirFora = undefined;
+    });
+
+    it("rejeita caminho literal fora de content/simulados/ (ex.: '../../etc/passwd')", () => {
+      expect(() => carregarPar("../../etc/passwd_simulado.md", "../../etc/passwd_gabarito.md"))
+        .toThrow(FormatoInvalido);
+    });
+
+    it("rejeita symlink DENTRO de content/simulados/ que aponta pra fora", () => {
+      dirFora = mkdtempSync(join(tmpdir(), "simulador-fora-"));
+      writeFileSync(
+        join(dirFora, "externo_simulado.md"),
+        templateSimulado(questaoSimuladoValida(1)),
+      );
+      writeFileSync(
+        join(dirFora, "externo_gabarito.md"),
+        templateGabarito(questaoGabaritoValida(1)),
+      );
+
+      mkdirSync(dirFixture, { recursive: true });
+      const linkSimulado = join(dirFixture, "link_simulado.md");
+      const linkGabarito = join(dirFixture, "link_gabarito.md");
+      symlinkSync(join(dirFora, "externo_simulado.md"), linkSimulado);
+      symlinkSync(join(dirFora, "externo_gabarito.md"), linkGabarito);
+
+      expect(() => carregarPar(linkSimulado, linkGabarito)).toThrow(FormatoInvalido);
+      try {
+        carregarPar(linkSimulado, linkGabarito);
+      } catch (e) {
+        expect((e as FormatoInvalido).motivo).toContain("fora do diretório de conteúdo permitido");
+      }
+    });
+
+    it("caminho inexistente vira FormatoInvalido, não um erro cru do fs", () => {
+      const caminho = join(dirFixture, "nao_existe_simulado.md");
+      expect(() => carregarPar(caminho, caminho)).toThrow(FormatoInvalido);
     });
   });
 });
