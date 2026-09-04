@@ -240,6 +240,14 @@ a {
   border-color: var(--borda);
 }
 
+/* Para <a>/<Link>, que não têm `disabled` nativo — usado junto com
+ * `aria-disabled` e bloqueio do clique no próprio componente. */
+.botao-desabilitado {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 /* -- badges de estado (SEMPRE ícone/texto, nunca só cor) ------------------ */
 
 .badge {

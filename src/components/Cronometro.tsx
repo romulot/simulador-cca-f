@@ -8,6 +8,8 @@
  */
 import { useEffect, useState } from "react";
 
+import { mmss } from "@/lib/formatacao";
+
 export interface CronometroProps {
   /** Segundos no momento em que este valor foi lido do servidor. */
   segundosIniciais: number;
@@ -18,13 +20,6 @@ export interface CronometroProps {
    * `role="status"` avisa por texto também, uma vez, quando cruza o limiar. */
   avisoAbaixoDe?: number;
   className?: string;
-}
-
-function formatar(segundos: number): string {
-  const s = Math.max(0, Math.round(segundos));
-  const m = Math.floor(s / 60);
-  const resto = s % 60;
-  return `${String(m).padStart(2, "0")}:${String(resto).padStart(2, "0")}`;
 }
 
 export function Cronometro({
@@ -64,7 +59,7 @@ export function Cronometro({
       className={["mono", className].filter(Boolean).join(" ")}
       style={emAviso ? { color: "var(--erro)", fontWeight: 700 } : undefined}
     >
-      {formatar(segundos)}
+      {mmss(segundos)}
       <span className="visualmente-oculto" role="status">
         {emAviso && !avisouUmaVez
           ? "Atenção: menos de cinco minutos restantes."
