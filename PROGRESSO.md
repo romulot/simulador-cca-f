@@ -38,6 +38,11 @@ Plano completo (26 tarefas, 7 fases) foi definido em modo `/crivo --full` (todas
 | 13 | `POST /api/rodadas/:id/encerrar` | `src/app/api/rodadas/[id]/encerrar/route.ts`, `src/lib/api/detalheRodada.ts` | `e85838e` |
 | 14 | `GET /api/historico` + `GET /api/historico/:id` | `src/app/api/historico/route.ts`, `.../[id]/route.ts` | `4aee84c` |
 | 15 | Testes de rotas de API | já coberto: teste dedicado ao lado de cada rota (94 testes no total ao final da Fase 5) | `4aee84c` |
+| — | **Sistema de design** (paleta, tipografia, componentes base) | `src/app/globals.css`, `src/app/layout.tsx`, `src/components/` | `53aea8b` |
+| — | **`GET /api/catalogo`** (não numerado, pré-requisito das telas 16/17) | `src/app/api/catalogo/route.ts` | `eff0dd1` |
+| 16-20 | 5 telas (menu, seleção, rodada/questão, resultado, histórico) | `src/app/page.tsx`, `src/app/selecao/`, `src/app/rodada/[id]/`, `src/app/resultado/[id]/`, `src/app/historico/` | `1694aa9` |
+| 21 | Acessibilidade transversal | foco gerenciado no diálogo de confirmação, Escape fecha, nunca só cor | `c138da2` |
+| 22 | Testes de fluxo (E2E) | `e2e/fluxo-completo.spec.ts` (Playwright, `yarn test:e2e`) | `c138da2` |
 
 Tarefas 1–5 e 8 passaram pelos 4 portões do modo `--full` (coder/tester/reviewer/security-auditor). Na Tarefa 3 apareceram **2 achados CRITICAL de segurança** (path traversal e bypass via symlink em `carregarPar()`), ambos corrigidos com aprovação explícita do usuário — ver `src/lib/parser/parser.ts`, função `validarDentroDoConteudo`. A partir da Tarefa 6, a execução passou para o **modo Single** (esta mesma sessão, sem subagentes) por restrição de orçamento — o usuário pediu para pausar após cada tarefa concluída e perguntar antes de seguir para a próxima.
 
@@ -55,6 +60,8 @@ A rota `POST /api/rodadas` devolve a questão ao cliente só depois de sanitizad
 
 `yarn build` e `yarn test` (94 testes, 13 arquivos) passam limpos no estado atual do repositório.
 
+**Fase 6 concluída** com verificação real no navegador (Playwright): 2 bugs de UI encontrados e corrigidos (botões-link sublinhados; barra fixa da seleção renderizando fora de ordem) — ver commit `c138da2` para detalhes. `yarn test` (95 testes) e `yarn test:e2e` (3 testes Playwright) passam limpos.
+
 ## O que falta (ordem do plano original)
 
 **Fase 5 — API (rotas Next.js)** — depende de 6 e 9
@@ -63,11 +70,6 @@ A rota `POST /api/rodadas` devolve a questão ao cliente só depois de sanitizad
 - [ ] 13. `POST .../encerrar`
 - [ ] 14. `GET /api/historico`
 - [ ] 15. Testes de rotas de API
-
-**Fase 6 — UI (5 telas + acessibilidade)** — depende da Fase 5
-- [ ] 16. Menu · 17. Seleção · 18. Rodada/Questão · 19. Resultado · 20. Histórico
-- [ ] 21. Revisão de acessibilidade transversal (nunca só cor para transmitir estado)
-- [ ] 22. Testes de fluxo das telas
 
 **Fase 7 — Docker e documentação** — depende das fases anteriores
 - [ ] 23. Dockerfile multi-stage
@@ -84,4 +86,4 @@ O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais toke
 1. Ler este arquivo.
 2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com a tabela acima.
 3. Rodar `yarn install && yarn build && yarn test` para confirmar que nada regrediu.
-4. Continuar pela Tarefa 16 (Fase 6 — telas), na ordem listada. A partir deste ponto o usuário pediu para seguir todas as etapas sem pausar para confirmação a cada tarefa.
+4. Continuar pela Tarefa 23 (Fase 7 — Docker e documentação), na ordem listada.
