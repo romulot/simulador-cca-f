@@ -1,0 +1,379 @@
+/* Sistema de tokens do simulador.
+ *
+ * Identidade: metade caderno de prova, metade painel de terminal — o app
+ * nasceu como uma TUI, e a web mantém o mesmo espírito sem virar um
+ * clone literal de terminal. Títulos/UI/dados em monoespaçada (o
+ * "instrumento"); enunciados e explicações em serifada (a "leitura").
+ * Paleta quente (papel + âmbar), não preto-com-neon nem creme-com-serifa-
+ * terracota — as duas combinações "padrão" de design gerado por IA.
+ */
+
+:root {
+  --fundo: #f6f2e9;
+  --papel: #201c14;
+  --painel: #fffdf8;
+  --painel-fraco: #efe9db;
+  --borda: #dcd3bf;
+  --acento: #b5730b;
+  --acento-texto: #ffffff;
+  --acerto: #2f7a4c;
+  --erro: #b24a2e;
+  --fraco: #6b6455;
+
+  --raio: 10px;
+  --raio-pequeno: 6px;
+  --sombra: 0 1px 2px rgba(32, 28, 20, 0.06), 0 4px 16px rgba(32, 28, 20, 0.05);
+
+  --fonte-serifada:
+    var(--font-corpo), Georgia, "Times New Roman", serif;
+  --fonte-mono:
+    var(--font-instrumento), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fundo: #15130f;
+    --papel: #ede6d9;
+    --painel: #1e1b16;
+    --painel-fraco: #262119;
+    --borda: #3a342a;
+    --acento: #e8a33d;
+    --acento-texto: #1a1207;
+    --acerto: #6fa97c;
+    --erro: #d97757;
+    --fraco: #948c78;
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 20px rgba(0, 0, 0, 0.25);
+  }
+}
+
+:root[data-theme="dark"] {
+  --fundo: #15130f;
+  --papel: #ede6d9;
+  --painel: #1e1b16;
+  --painel-fraco: #262119;
+  --borda: #3a342a;
+  --acento: #e8a33d;
+  --acento-texto: #1a1207;
+  --acerto: #6fa97c;
+  --erro: #d97757;
+  --fraco: #948c78;
+  --sombra: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: light dark;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--papel);
+  font-family: var(--fonte-serifada);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+button,
+input,
+select,
+label,
+.mono {
+  font-family: var(--fonte-mono);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.6em;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+a {
+  color: var(--acento);
+}
+
+/* Foco visível sempre — nunca depender só de contraste sutil de borda. */
+:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* -- layout de página --------------------------------------------------- */
+
+.pagina {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(1rem, 4vw, 3rem) 1rem;
+}
+
+.envelope {
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.envelope-largo {
+  max-width: 920px;
+}
+
+/* -- painel (a "moldura" da TUI) ----------------------------------------- */
+
+.painel {
+  background: var(--painel);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+  padding: 1.5rem;
+}
+
+.painel-titulo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--borda);
+}
+
+.painel-titulo h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fraco);
+}
+
+/* -- botões --------------------------------------------------------------- */
+
+.botao {
+  font-family: var(--fonte-mono);
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--borda);
+  background: var(--painel-fraco);
+  color: var(--papel);
+  padding: 0.7em 1.1em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.botao:hover:not(:disabled) {
+  border-color: var(--acento);
+}
+
+.botao:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.botao-primario {
+  background: var(--acento);
+  border-color: var(--acento);
+  color: var(--acento-texto);
+}
+
+.botao-primario:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.botao-bloco {
+  width: 100%;
+  justify-content: center;
+  padding: 0.9em 1.1em;
+}
+
+.botao-fantasma {
+  background: transparent;
+  border-color: transparent;
+}
+
+.botao-fantasma:hover:not(:disabled) {
+  border-color: var(--borda);
+}
+
+/* -- badges de estado (SEMPRE ícone/texto, nunca só cor) ------------------ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  border: 1px solid var(--borda);
+}
+
+.badge-acerto {
+  color: var(--acerto);
+  border-color: color-mix(in srgb, var(--acerto) 45%, var(--borda));
+}
+
+.badge-erro {
+  color: var(--erro);
+  border-color: color-mix(in srgb, var(--erro) 45%, var(--borda));
+}
+
+.badge-neutro {
+  color: var(--fraco);
+}
+
+/* -- trilha de progresso (o elemento-assinatura do app) ------------------- */
+/* Uma célula por questão: em branco (contorno), respondida (preenchida),
+ * atual (acento + anel). O MESMO grão visual reaparece no menu (miniatura),
+ * na tela de questão (trilha inteira) e no resultado (barra por domínio) —
+ * um único motivo, três escalas. */
+
+.trilha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+}
+
+.trilha-celula {
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 3px;
+  border: 1.5px solid var(--fraco);
+  background: transparent;
+  flex: none;
+}
+
+.trilha-celula[data-estado="respondida"] {
+  background: var(--fraco);
+  border-color: var(--fraco);
+}
+
+.trilha-celula[data-estado="atual"] {
+  border-color: var(--acento);
+  background: var(--acento);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acento) 25%, transparent);
+}
+
+.trilha-celula[data-estado="acerto"] {
+  background: var(--acerto);
+  border-color: var(--acerto);
+}
+
+.trilha-celula[data-estado="erro"] {
+  background: var(--erro);
+  border-color: var(--erro);
+}
+
+/* -- barra proporcional (desempenho por domínio) -------------------------- */
+
+.barra-trilho {
+  flex: 1;
+  height: 0.6rem;
+  border-radius: 999px;
+  background: var(--painel-fraco);
+  border: 1px solid var(--borda);
+  overflow: hidden;
+}
+
+.barra-preenchimento {
+  height: 100%;
+  background: var(--acento);
+  border-radius: 999px 0 0 999px;
+  transition: width 0.2s ease;
+}
+
+/* -- rodapé de dicas (equivalente ao rodapé de teclas da TUI) ------------- */
+
+.dicas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4em 1em;
+  font-family: var(--fonte-mono);
+  font-size: 0.85rem;
+  color: var(--fraco);
+}
+
+.dicas kbd {
+  font-family: var(--fonte-mono);
+  color: var(--papel);
+  background: var(--painel-fraco);
+  border: 1px solid var(--borda);
+  border-radius: 4px;
+  padding: 0.1em 0.45em;
+  font-size: 0.85em;
+}
+
+/* -- utilitários ----------------------------------------------------------- */
+
+.pilha {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.espaco-entre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.texto-fraco {
+  color: var(--fraco);
+}
+
+.texto-pequeno {
+  font-size: 0.85rem;
+}
