@@ -1,0 +1,15 @@
+services:
+  simulador:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      # Volume NOMEADO (não bind mount) para o banco SQLite -- sobrevive a
+      # `docker compose down` (sem `-v`) e a `docker compose up` de novo.
+      # `down -v` remove o volume e, com ele, o histórico -- documentado
+      # explicitamente no README.
+      - dados_simulador:/app/data
+    restart: unless-stopped
+
+volumes:
+  dados_simulador:
