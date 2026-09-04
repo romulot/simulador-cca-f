@@ -112,8 +112,14 @@ export interface Composicao {
   questoes: Questao[];
 }
 
-/** Fisher-Yates com RNG injetável: embaralha `arr` in-place em uma cópia. */
-function embaralhar<T>(arr: T[], rng: Rng): T[] {
+/** Fisher-Yates com RNG injetável: embaralha `arr` in-place em uma cópia.
+ *
+ * Exportada (não só interna a este módulo) porque `rodada.ts` reaproveita
+ * para embaralhar a ordem das questões ao criar uma rodada de prática —
+ * duplicar o mesmo Fisher-Yates ali seria a mesma lógica mantida em dois
+ * lugares.
+ */
+export function embaralhar<T>(arr: T[], rng: Rng): T[] {
   const copia = [...arr];
   for (let i = copia.length - 1; i > 0; i--) {
     const j = Math.min(i, Math.floor(rng() * (i + 1)));
