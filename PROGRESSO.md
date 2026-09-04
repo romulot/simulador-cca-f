@@ -30,16 +30,16 @@ Plano completo (26 tarefas, 7 fases) foi definido em modo `/crivo --full` (todas
 | 8 | Schema SQLite + conexão + migração idempotente | `src/db/` | `3bb89f5` |
 | 6 | Motor de rodada (navegação sem wrap, tempo por visita, encerramento idempotente, placar com 2 denominadores) | `src/domain/rodada.ts` | `fcbe24f` |
 | 7 | Testes unitários de domínio | já coberto por `sorteio.test.ts` (10 testes) + `rodada.test.ts` (17 testes) | `fcbe24f` |
+| 9 | Repositório de acesso a dados (rodadas + histórico) | `src/db/repositorioRodadas.ts`, `src/db/repositorioHistorico.ts` | `6c17e18` |
+| 10 | Testes de persistência | já coberto por `repositorioRodadas.test.ts` (6 testes) + `repositorioHistorico.test.ts` (6 testes) | `6c17e18` |
 
 Tarefas 1–5 e 8 passaram pelos 4 portões do modo `--full` (coder/tester/reviewer/security-auditor). Na Tarefa 3 apareceram **2 achados CRITICAL de segurança** (path traversal e bypass via symlink em `carregarPar()`), ambos corrigidos com aprovação explícita do usuário — ver `src/lib/parser/parser.ts`, função `validarDentroDoConteudo`. A partir da Tarefa 6, a execução passou para o **modo Single** (esta mesma sessão, sem subagentes) por restrição de orçamento — o usuário pediu para pausar após cada tarefa concluída e perguntar antes de seguir para a próxima.
 
-`yarn build` e `yarn test` (47 testes, 5 arquivos) passam limpos no estado atual do repositório.
+Na Tarefa 9 surgiram 2 correções em código já aprovado, encontradas ao implementar: `schema.sql` tinha `decorrido_segundos`/`segundos` como `INTEGER` (truncava a precisão de ponto flutuante do domínio — corrigido para `REAL`); e `vitest.config.mts` nunca teve o alias `@/` configurado (só não tinha quebrado ainda porque todo import cruzado anterior era `import type`, apagado em build — corrigido com `resolve.alias` espelhando `tsconfig.json`).
+
+`yarn build` e `yarn test` (58 testes, 7 arquivos) passam limpos no estado atual do repositório.
 
 ## O que falta (ordem do plano original)
-
-**Fase 4 — Persistência (parcial)**
-- [ ] 9. Repositório de acesso a dados (`src/db/repositorioRodadas.ts`, `repositorioHistorico.ts`) — grava rodada/snapshot, histórico recalcula estatística na leitura (nunca persistida). Depende de: 8 (pronto), 3 (pronto), 6 (pronto).
-- [ ] 10. Testes de persistência.
 
 **Fase 5 — API (rotas Next.js)** — depende de 6 e 9
 - [ ] 11. `POST /api/rodadas` (criar rodada)
@@ -68,4 +68,4 @@ O modo `--full` (multiagente com 4 portões por tarefa) consumiu muito mais toke
 1. Ler este arquivo.
 2. Conferir `git log --oneline` para confirmar que o estado do repositório bate com a tabela acima.
 3. Rodar `yarn install && yarn build && yarn test` para confirmar que nada regrediu.
-4. Continuar pela Tarefa 9, na ordem listada — perguntando ao usuário antes de cada nova tarefa, conforme pedido.
+4. Continuar pela Tarefa 11 (Fase 5 — rotas de API), na ordem listada — perguntando ao usuário antes de cada nova tarefa, conforme pedido.
