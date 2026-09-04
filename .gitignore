@@ -17,6 +17,7 @@ out/
 .pnp.*
 
 # database
+data/
 *.db
 *.db-journal
 
