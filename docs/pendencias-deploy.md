@@ -16,18 +16,18 @@ O código já está pronto e mergeado em `main` (ver `docs/decisoes/persistencia
 
 - [x] `DATABASE_URL` e `SESSION_SECRET` configuradas em Production e Preview.
 
-## 4. Deploy e validação
+## 4. Deploy e validação — ✅ feito
 
-- [ ] Disparar o primeiro deploy de produção (o projeto foi conectado ao Git depois do último push em `main`, então ainda não rodou nenhum build — falta um push novo ou um deploy manual pela dashboard).
-- [ ] Na primeira requisição que tocar o banco, o schema é criado sozinho (`CREATE TABLE IF NOT EXISTS`, idempotente) — não precisa rodar migração manual.
-- [ ] Abrir a URL pública e validar o fluxo completo:
-  - [ ] cadastro de uma conta nova;
-  - [ ] login;
-  - [ ] praticar um simulado;
-  - [ ] modo prova;
-  - [ ] histórico mostra as rodadas;
-  - [ ] logout;
-  - [ ] **isolamento**: criar uma segunda conta e confirmar que ela não vê o histórico da primeira.
+- [x] Deploy de produção disparado via `git push` na `main` (commit `8e9622f`). URL pública: https://simulador-cca-f.vercel.app
+- [x] Schema criado sozinho na primeira requisição que tocou o banco (`CREATE TABLE IF NOT EXISTS`, idempotente) — confirmado, não precisou de migração manual.
+- [x] Fluxo completo validado com Playwright direto na URL pública:
+  - [x] cadastro de uma conta nova;
+  - [x] login;
+  - [x] praticar um simulado (rodada de 6 questões completada, resultado calculado corretamente);
+  - [x] modo prova (60 questões, timer de 2h, inicia corretamente);
+  - [x] histórico mostra as rodadas (data, placar, tempo);
+  - [x] logout (redireciona para `/login`);
+  - [x] **isolamento**: segunda conta criada, histórico veio vazio ("Nenhuma rodada ainda") — não vê nada da primeira conta.
 
 ## Nota de segurança
 
