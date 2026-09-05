@@ -1,20 +1,16 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Questao } from "@/lib/parser/tipos";
+import { poolTeste, criarUsuarioTeste } from "@/db/apoioTeste";
+import { cookieSessaoTeste } from "@/lib/auth/apoioTeste";
 
-let diretorioTemporario: string;
+let userId: number;
+let outroUsuarioId: number;
 
-beforeAll(() => {
-  diretorioTemporario = mkdtempSync(join(tmpdir(), "simulador-api-questoes-test-"));
-  process.env.SIMULADOR_DB_PATH = join(diretorioTemporario, "teste.db");
-});
-
-afterAll(() => {
-  rmSync(diretorioTemporario, { recursive: true, force: true });
-  delete process.env.SIMULADOR_DB_PATH;
+beforeEach(async () => {
+  const pool = await poolTeste();
+  userId = await criarUsuarioTeste(pool);
+  outroUsuarioId = await criarUsuarioTeste(pool);
 });
 
 function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Questao {
@@ -37,18 +33,22 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Ques
   };
 }
 
-async function novaRodada(questoes: Questao[], limiteSegundos: number | null = null) {
+async function novaRodada(questoes: Questao[], limiteSegundos: number | null = null, dono = userId) {
   const { obterConexao } = await import("@/db/conexao");
   const { criarRodada } = await import("@/db/repositorioRodadas");
-  const db = obterConexao();
-  const id = criarRodada(db, { questoes, modo: "pratica", limiteSegundos });
+  const db = await obterConexao();
+  const id = await criarRodada(db, { userId: dono, questoes, modo: "pratica", limiteSegundos });
   return { db, id };
 }
 
-function post(url: string, corpo: unknown): Request {
+function get(url: string, dono = userId): Request {
+  return new Request(url, { headers: { cookie: cookieSessaoTeste(dono) } });
+}
+
+function post(url: string, corpo: unknown, dono = userId): Request {
   return new Request(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", cookie: cookieSessaoTeste(dono) },
     body: JSON.stringify(corpo),
   });
 }
@@ -58,7 +58,7 @@ describe("GET /api/rodadas/:id/questoes/:indice", () => {
     const { id } = await novaRodada([questaoFake(1, "A"), questaoFake(2, "B")]);
     const { GET } = await import("./route");
 
-    const resposta = await GET(new Request("http://localhost"), {
+    const resposta = await GET(get("http://localhost"), {
       params: Promise.resolve({ id: String(id), indice: "1" }),
     });
     expect(resposta.status).toBe(200);
@@ -68,10 +68,19 @@ describe("GET /api/rodadas/:id/questoes/:indice", () => {
     expect(corpo.questao).not.toHaveProperty("correta");
   });
 
+  it("rodada de outro usuário devolve 404", async () => {
+    const { id } = await novaRodada([questaoFake(1)]);
+    const { GET } = await import("./route");
+    const resposta = await GET(get("http://localhost", outroUsuarioId), {
+      params: Promise.resolve({ id: String(id), indice: "0" }),
+    });
+    expect(resposta.status).toBe(404);
+  });
+
   it("índice fora da faixa devolve 400", async () => {
     const { id } = await novaRodada([questaoFake(1)]);
     const { GET } = await import("./route");
-    const resposta = await GET(new Request("http://localhost"), {
+    const resposta = await GET(get("http://localhost"), {
       params: Promise.resolve({ id: String(id), indice: "5" }),
     });
     expect(resposta.status).toBe(400);
@@ -97,8 +106,18 @@ describe("POST /api/rodadas/:id/questoes/:indice — responder", () => {
     // Confirma que o tempo foi mesmo persistido (não só devolvido).
     const { carregarRodada } = await import("@/db/repositorioRodadas");
     const { obterConexao } = await import("@/db/conexao");
-    const persistida = carregarRodada(obterConexao(), id)!;
+    const persistida = (await carregarRodada(await obterConexao(), id, userId))!;
     expect(persistida.estado.tempos[0]).toBeCloseTo(12.5);
+  });
+
+  it("não permite agir sobre uma rodada de outro usuário (404)", async () => {
+    const { id } = await novaRodada([questaoFake(1, "A")]);
+    const { POST } = await import("./route");
+    const resposta = await POST(
+      post("http://localhost", { resposta: "A", segundosGastos: 1 }, outroUsuarioId),
+      { params: Promise.resolve({ id: String(id), indice: "0" }) },
+    );
+    expect(resposta.status).toBe(404);
   });
 
   it("rejeita agir sobre um índice que não é o atual do servidor (409)", async () => {
@@ -160,7 +179,7 @@ describe("POST /api/rodadas/:id/questoes/:indice — navegar", () => {
 
     const { carregarRodada } = await import("@/db/repositorioRodadas");
     const { obterConexao } = await import("@/db/conexao");
-    expect(carregarRodada(obterConexao(), id)!.estado.indice).toBe(0);
+    expect((await carregarRodada(await obterConexao(), id, userId))!.estado.indice).toBe(0);
   });
 });
 
@@ -184,6 +203,6 @@ describe("POST /api/rodadas/:id/questoes/:indice — autoridade do tempo no serv
     // E a resposta realmente não foi gravada.
     const { carregarRodada } = await import("@/db/repositorioRodadas");
     const { obterConexao } = await import("@/db/conexao");
-    expect(carregarRodada(obterConexao(), id)!.estado.respostas[0]).toBeNull();
+    expect((await carregarRodada(await obterConexao(), id, userId))!.estado.respostas[0]).toBeNull();
   });
 });

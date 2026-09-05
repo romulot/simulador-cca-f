@@ -1,4 +1,4 @@
--- Schema do banco de persistência de rodadas (prática/prova).
+-- Schema Postgres (Neon) do simulador — usuários + persistência de rodadas.
 --
 -- Cada rodada guarda um snapshot AUTO-CONTIDO de cada questão respondida
 -- (texto completo, não só um ID): o markdown-fonte em `content/simulados/`
@@ -13,19 +13,38 @@
 --
 -- `esgotou_tempo` é um fato bruto da rodada (como ela terminou), não
 -- inferido depois por comparação de `decorrido_segundos >= limite_segundos`.
+--
+-- `iniciada_em` fica como TEXT (ISO 8601), não TIMESTAMPTZ: o valor é
+-- gravado e lido sempre pela mesma camada de aplicação (nunca por SQL puro
+-- de terceiros), então manter o mesmo formato de string usado desde a
+-- versão SQLite evita depender de como cada driver Postgres converte
+-- timestamp <-> Date.
+--
+-- IDs são INTEGER (4 bytes), não BIGINT: o driver `pg` devolve BIGINT como
+-- string (evita perda de precisão acima de Number.MAX_SAFE_INTEGER no lado
+-- JS) — o que quebraria silenciosamente qualquer comparação `===`/tipo
+-- `number` no código (ex.: o `uid` da sessão). Nenhuma tabela deste app
+-- chega perto do limite de 2^31 linhas, então INTEGER evita essa classe de
+-- bug sem custo real.
 
-PRAGMA foreign_keys = ON;
+CREATE TABLE IF NOT EXISTS usuarios (
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  senha_hash TEXT NOT NULL,
+  criado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS rodadas (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
   modo TEXT NOT NULL CHECK (modo IN ('pratica', 'prova')),
   iniciada_em TEXT NOT NULL,
   limite_segundos INTEGER,
-  -- REAL (não INTEGER): `decorrido()` no domínio (src/domain/rodada.ts) é a
-  -- diferença entre dois timestamps de ponto flutuante: truncar pra inteiro
-  -- aqui perderia precisão sem necessidade.
-  decorrido_segundos REAL,
-  esgotou_tempo INTEGER NOT NULL DEFAULT 0 CHECK (esgotou_tempo IN (0, 1)),
+  -- DOUBLE PRECISION (não INTEGER): `decorrido()` no domínio
+  -- (src/domain/rodada.ts) é a diferença entre dois timestamps de ponto
+  -- flutuante: truncar pra inteiro aqui perderia precisão sem necessidade.
+  decorrido_segundos DOUBLE PRECISION,
+  esgotou_tempo BOOLEAN NOT NULL DEFAULT FALSE,
   status TEXT NOT NULL CHECK (status IN ('em_andamento', 'finalizada')),
   indice_atual INTEGER NOT NULL DEFAULT 0,
   cotas_json TEXT,
@@ -33,11 +52,13 @@ CREATE TABLE IF NOT EXISTS rodadas (
   deficit_json TEXT
 );
 
+CREATE INDEX IF NOT EXISTS idx_rodadas_user_id ON rodadas (user_id);
+
 -- `posicao` é 0-based: mesmo índice usado para `sessao.questoes[i]` /
 -- `sessao.respostas[i]` / `sessao.tempos[i]` no código Python de origem,
 -- sem precisar de tradução +1/-1 ao ler ou escrever.
 CREATE TABLE IF NOT EXISTS questoes_rodada (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   rodada_id INTEGER NOT NULL REFERENCES rodadas (id) ON DELETE CASCADE,
   posicao INTEGER NOT NULL,
   origem TEXT NOT NULL,
@@ -56,8 +77,8 @@ CREATE TABLE IF NOT EXISTS questoes_rodada (
   cenario TEXT NOT NULL,
   principio_testado TEXT NOT NULL,
   resposta TEXT CHECK (resposta IN ('A', 'B', 'C', 'D')),
-  -- REAL pelo mesmo motivo de `rodadas.decorrido_segundos` acima.
-  segundos REAL NOT NULL DEFAULT 0
+  -- DOUBLE PRECISION pelo mesmo motivo de `rodadas.decorrido_segundos` acima.
+  segundos DOUBLE PRECISION NOT NULL DEFAULT 0
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_questoes_rodada_rodada_posicao

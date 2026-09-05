@@ -12,6 +12,7 @@ import { NextResponse } from "next/server";
 
 import { obterConexao } from "@/db/conexao";
 import { carregarRodada, salvarRodada } from "@/db/repositorioRodadas";
+import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
 import { encerrar, relogioPadrao } from "@/domain/rodada";
 import { montarDetalheRodada } from "@/lib/api/detalheRodada";
 
@@ -31,14 +32,19 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
+  const userId = obterUsuarioIdDaSessao(request);
+  if (userId === null) {
+    return erro(401, "não autenticado");
+  }
+
   const { id: idParam } = await params;
   const id = Number(idParam);
   if (!Number.isInteger(id) || id <= 0) {
     return erro(400, "id inválido");
   }
 
-  const db = obterConexao();
-  const persistida = carregarRodada(db, id);
+  const db = await obterConexao();
+  const persistida = await carregarRodada(db, id, userId);
   if (!persistida) {
     return erro(404, "rodada não encontrada");
   }
@@ -71,13 +77,13 @@ export async function POST(
   }
 
   estado = encerrar(estado, relogio);
-  salvarRodada(db, id, estado, relogio);
+  await salvarRodada(db, id, estado, relogio, userId);
 
   // Recarrega para montar o detalhe a partir do estado já persistido e
   // congelado (restaurarFinalizada por dentro de carregarRodada) — evita
   // depender do `estado` em memória desta chamada bater 1:1 com o que foi
   // de fato gravado.
-  const persistidaFinal = carregarRodada(db, id)!;
+  const persistidaFinal = (await carregarRodada(db, id, userId))!;
 
   return NextResponse.json(montarDetalheRodada(persistidaFinal));
 }

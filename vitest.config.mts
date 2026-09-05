@@ -14,6 +14,15 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Testes de repositório/rotas precisam de um Postgres real (ver
+    // src/db/apoioTeste.ts) — default para o Postgres local de
+    // desenvolvimento (README, seção "Desenvolvimento local"). Sobrescreva
+    // exportando as variáveis antes de `yarn test` se seu Postgres de teste
+    // estiver em outro lugar.
+    env: {
+      DATABASE_URL: process.env.DATABASE_URL ?? "postgres://postgres:simulador@localhost:5433/simulador",
+      SESSION_SECRET: process.env.SESSION_SECRET ?? "segredo-de-teste-nao-usar-em-producao",
+    },
     // Vários testes precisam criar fixtures DENTRO de `content/simulados/`
     // (não em tmpdir do SO) porque `parser.ts::validarDentroDoConteudo`
     // rejeita, de propósito, qualquer caminho fora dali (é a correção do

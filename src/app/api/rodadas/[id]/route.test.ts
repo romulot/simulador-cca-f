@@ -1,20 +1,16 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Questao } from "@/lib/parser/tipos";
+import { poolTeste, criarUsuarioTeste } from "@/db/apoioTeste";
+import { cookieSessaoTeste } from "@/lib/auth/apoioTeste";
 
-let diretorioTemporario: string;
+let userId: number;
+let outroUsuarioId: number;
 
-beforeAll(() => {
-  diretorioTemporario = mkdtempSync(join(tmpdir(), "simulador-api-rodada-id-test-"));
-  process.env.SIMULADOR_DB_PATH = join(diretorioTemporario, "teste.db");
-});
-
-afterAll(() => {
-  rmSync(diretorioTemporario, { recursive: true, force: true });
-  delete process.env.SIMULADOR_DB_PATH;
+beforeEach(async () => {
+  const pool = await poolTeste();
+  userId = await criarUsuarioTeste(pool);
+  outroUsuarioId = await criarUsuarioTeste(pool);
 });
 
 function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Questao {
@@ -37,18 +33,27 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Ques
   };
 }
 
-function requisicao(url: string): Request {
-  return new Request(url);
+function requisicao(url: string, dono = userId): Request {
+  return new Request(url, { headers: { cookie: cookieSessaoTeste(dono) } });
 }
 
 describe("GET /api/rodadas/:id", () => {
+  it("sem sessão devolve 401", async () => {
+    const { GET } = await import("./route");
+    const resposta = await GET(new Request("http://localhost/api/rodadas/1"), {
+      params: Promise.resolve({ id: "1" }),
+    });
+    expect(resposta.status).toBe(401);
+  });
+
   it("devolve o estado atual de uma rodada em andamento, sem vazar a resposta certa", async () => {
     const { obterConexao } = await import("@/db/conexao");
     const { criarRodada } = await import("@/db/repositorioRodadas");
     const { GET } = await import("./route");
 
-    const db = obterConexao();
-    const id = criarRodada(db, {
+    const db = await obterConexao();
+    const id = await criarRodada(db, {
+      userId,
       questoes: [questaoFake(1, "A"), questaoFake(2, "B")],
       modo: "pratica",
       limiteSegundos: null,
@@ -68,6 +73,25 @@ describe("GET /api/rodadas/:id", () => {
     expect(corpo.encerrada).toBe(false);
     expect(corpo.questaoAtual.posicao).toBe(0);
     expect(corpo.questaoAtual).not.toHaveProperty("correta");
+  });
+
+  it("rodada de outro usuário devolve 404, igual a inexistente", async () => {
+    const { obterConexao } = await import("@/db/conexao");
+    const { criarRodada } = await import("@/db/repositorioRodadas");
+    const { GET } = await import("./route");
+
+    const db = await obterConexao();
+    const id = await criarRodada(db, {
+      userId,
+      questoes: [questaoFake(1)],
+      modo: "pratica",
+      limiteSegundos: null,
+    });
+
+    const resposta = await GET(requisicao(`http://localhost/api/rodadas/${id}`, outroUsuarioId), {
+      params: Promise.resolve({ id: String(id) }),
+    });
+    expect(resposta.status).toBe(404);
   });
 
   it("id inexistente devolve 404", async () => {

@@ -1,4 +1,4 @@
-/** Persistência de uma rodada (prática ou prova) em SQLite.
+/** Persistência de uma rodada (prática ou prova) em Postgres.
  *
  * Duas responsabilidades, refletindo o schema (`schema.sql`):
  * `criarRodada` grava o snapshot AUTO-CONTIDO inicial (cada questão com seu
@@ -6,11 +6,15 @@
  * reconstroem e persistem o `RodadaEstado` de `src/domain/rodada.ts` entre
  * requisições HTTP.
  *
+ * Toda operação recebe `userId` e filtra/checa posse por ele — é o único
+ * ponto de isolamento entre usuários (`questoes_rodada` não tem `user_id`
+ * próprio, herda o isolamento via `rodada_id`).
+ *
  * Este módulo NÃO decide política de tempo (quando chamar `irPara`,
  * `responder`, etc.) — isso é das rotas de API, que ainda vão consumir este
  * repositório. Aqui só entra/sai estado.
  */
-import type Database from "better-sqlite3";
+import type { Pool } from "pg";
 
 import type { Letra, Questao } from "@/lib/parser/tipos";
 import {
@@ -43,6 +47,9 @@ export interface RodadaPersistida {
 }
 
 export interface CriarRodadaParams {
+  /** Dono da rodada — todo acesso subsequente (carregar/salvar/histórico)
+   * é filtrado por este id. */
+  userId: number;
   /** Questões já na ordem final da rodada (embaralhada se aplicável) —
    * decisão de ordem é de quem chama, não deste repositório. */
   questoes: Questao[];
@@ -66,7 +73,7 @@ interface LinhaRodada {
   iniciada_em: string;
   limite_segundos: number | null;
   decorrido_segundos: number | null;
-  esgotou_tempo: number;
+  esgotou_tempo: boolean;
   status: "em_andamento" | "finalizada";
   indice_atual: number;
   cotas_json: string | null;
@@ -115,90 +122,75 @@ function linhaParaQuestao(linha: LinhaQuestaoRodada): Questao {
 
 /** Grava uma rodada nova: 1 linha em `rodadas` + 1 linha por questão em
  * `questoes_rodada`, numa única transação. */
-export function criarRodada(db: Database.Database, params: CriarRodadaParams): number {
+export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promise<number> {
   const iniciadaEm = params.iniciadaEm ?? new Date();
 
-  const inserirRodada = db.prepare<{
-    modo: string;
-    iniciada_em: string;
-    limite_segundos: number | null;
-    cotas_json: string | null;
-    disponivel_json: string | null;
-    deficit_json: string | null;
-  }>(`
-    INSERT INTO rodadas
-      (modo, iniciada_em, limite_segundos, decorrido_segundos, esgotou_tempo,
-       status, indice_atual, cotas_json, disponivel_json, deficit_json)
-    VALUES
-      (@modo, @iniciada_em, @limite_segundos, NULL, 0,
-       'em_andamento', 0, @cotas_json, @disponivel_json, @deficit_json)
-  `);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const inserirQuestao = db.prepare<{
-    rodada_id: number;
-    posicao: number;
-    origem: string;
-    dominio: number | null;
-    numero: number;
-    enunciado: string;
-    alternativas_json: string;
-    correta: string;
-    resumo: string;
-    explicacoes_json: string;
-    bloom: string;
-    dificuldade: string;
-    rubrica: string;
-    cenario: string;
-    principio_testado: string;
-  }>(`
-    INSERT INTO questoes_rodada
-      (rodada_id, posicao, origem, dominio, numero, enunciado,
-       alternativas_json, correta, resumo, explicacoes_json,
-       bloom, dificuldade, rubrica, cenario, principio_testado)
-    VALUES
-      (@rodada_id, @posicao, @origem, @dominio, @numero, @enunciado,
-       @alternativas_json, @correta, @resumo, @explicacoes_json,
-       @bloom, @dificuldade, @rubrica, @cenario, @principio_testado)
-  `);
+    const resultado = await client.query<{ id: number }>(
+      `INSERT INTO rodadas
+         (user_id, modo, iniciada_em, limite_segundos, decorrido_segundos, esgotou_tempo,
+          status, indice_atual, cotas_json, disponivel_json, deficit_json)
+       VALUES
+         ($1, $2, $3, $4, NULL, FALSE,
+          'em_andamento', 0, $5, $6, $7)
+       RETURNING id`,
+      [
+        params.userId,
+        params.modo,
+        iniciadaEm.toISOString(),
+        params.limiteSegundos,
+        params.composicao ? JSON.stringify(params.composicao.cotas) : null,
+        params.composicao ? JSON.stringify(params.composicao.disponivel) : null,
+        params.composicao ? JSON.stringify(params.composicao.deficit) : null,
+      ],
+    );
+    const rodadaId = resultado.rows[0].id;
 
-  const gravarTudo = db.transaction((questoes: Questao[]) => {
-    const info = inserirRodada.run({
-      modo: params.modo,
-      iniciada_em: iniciadaEm.toISOString(),
-      limite_segundos: params.limiteSegundos,
-      cotas_json: params.composicao ? JSON.stringify(params.composicao.cotas) : null,
-      disponivel_json: params.composicao ? JSON.stringify(params.composicao.disponivel) : null,
-      deficit_json: params.composicao ? JSON.stringify(params.composicao.deficit) : null,
-    });
-    const rodadaId = Number(info.lastInsertRowid);
+    for (let posicao = 0; posicao < params.questoes.length; posicao++) {
+      const q = params.questoes[posicao];
+      await client.query(
+        `INSERT INTO questoes_rodada
+           (rodada_id, posicao, origem, dominio, numero, enunciado,
+            alternativas_json, correta, resumo, explicacoes_json,
+            bloom, dificuldade, rubrica, cenario, principio_testado)
+         VALUES
+           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        [
+          rodadaId,
+          posicao,
+          q.origem,
+          q.dominio,
+          q.numero,
+          q.enunciado,
+          JSON.stringify(q.alternativas),
+          q.correta,
+          q.resumo,
+          JSON.stringify(q.explicacoes),
+          q.metadados.bloom,
+          q.metadados.dificuldade,
+          q.metadados.rubrica,
+          q.metadados.cenario,
+          q.metadados.principioTestado,
+        ],
+      );
+    }
 
-    questoes.forEach((q, posicao) => {
-      inserirQuestao.run({
-        rodada_id: rodadaId,
-        posicao,
-        origem: q.origem,
-        dominio: q.dominio,
-        numero: q.numero,
-        enunciado: q.enunciado,
-        alternativas_json: JSON.stringify(q.alternativas),
-        correta: q.correta,
-        resumo: q.resumo,
-        explicacoes_json: JSON.stringify(q.explicacoes),
-        bloom: q.metadados.bloom,
-        dificuldade: q.metadados.dificuldade,
-        rubrica: q.metadados.rubrica,
-        cenario: q.metadados.cenario,
-        principio_testado: q.metadados.principioTestado,
-      });
-    });
-
+    await client.query("COMMIT");
     return rodadaId;
-  });
-
-  return gravarTudo(params.questoes);
+  } catch (erro) {
+    await client.query("ROLLBACK");
+    throw erro;
+  } finally {
+    client.release();
+  }
 }
 
-/** Reconstrói uma rodada persistida a partir do id, ou `null` se não existe.
+/** Reconstrói uma rodada persistida a partir do id, ou `null` se não existe
+ * OU não pertence a `userId` (mesmo tratamento — nunca revela a um usuário
+ * que um id de outro dono existe).
  *
  * Rodada `finalizada`: usa `restaurarFinalizada` (o domínio nunca mais
  * consulta o relógio). Rodada `em_andamento`: reconstrói com `inicioEm` a
@@ -208,21 +200,29 @@ export function criarRodada(db: Database.Database, params: CriarRodadaParams): n
  * vivo" entre requisições HTTP — quem acumula `tempos[i]` entre uma
  * requisição e outra é a camada de API, não este repositório).
  */
-export function carregarRodada(db: Database.Database, id: number): RodadaPersistida | null {
-  const linhaRodada = db.prepare("SELECT * FROM rodadas WHERE id = ?").get(id) as
-    | LinhaRodada
-    | undefined;
+export async function carregarRodada(
+  pool: Pool,
+  id: number,
+  userId: number,
+): Promise<RodadaPersistida | null> {
+  const resultadoRodada = await pool.query<LinhaRodada>(
+    "SELECT * FROM rodadas WHERE id = $1 AND user_id = $2",
+    [id, userId],
+  );
+  const linhaRodada = resultadoRodada.rows[0];
   if (!linhaRodada) return null;
 
-  const linhasQuestoes = db
-    .prepare("SELECT * FROM questoes_rodada WHERE rodada_id = ? ORDER BY posicao ASC")
-    .all(id) as LinhaQuestaoRodada[];
+  const resultadoQuestoes = await pool.query<LinhaQuestaoRodada>(
+    "SELECT * FROM questoes_rodada WHERE rodada_id = $1 ORDER BY posicao ASC",
+    [id],
+  );
+  const linhasQuestoes = resultadoQuestoes.rows;
 
   const questoes = linhasQuestoes.map(linhaParaQuestao);
   const respostas = linhasQuestoes.map((l) => (l.resposta as Letra | null));
   const tempos = linhasQuestoes.map((l) => l.segundos);
   const modo = linhaRodada.modo as Modo;
-  const esgotouTempo = linhaRodada.esgotou_tempo === 1;
+  const esgotouTempo = linhaRodada.esgotou_tempo;
 
   const estado: RodadaEstado =
     linhaRodada.status === "finalizada"
@@ -271,59 +271,65 @@ export function carregarRodada(db: Database.Database, id: number): RodadaPersist
  * `relogio` decide se `estado` já está encerrada (`encerrada()` do
  * domínio) — chamado aqui, não antes, porque é o ÚNICO ponto que grava
  * `status='finalizada'` e congela `decorrido_segundos`.
+ *
+ * `userId` é checado na cláusula `WHERE` da própria atualização (defesa em
+ * profundidade: mesmo que o chamador já tenha validado posse via
+ * `carregarRodada`, esta função nunca escreve numa rodada de outro dono). Se
+ * a atualização de `rodadas` não afetar nenhuma linha (id inexistente ou de
+ * outro dono), a transação é revertida SEM tocar `questoes_rodada` — sem
+ * essa checagem, as questões seriam atualizadas por `rodada_id` mesmo
+ * quando a linha de `rodadas` não pertence a `userId`.
  */
-export function salvarRodada(
-  db: Database.Database,
+export async function salvarRodada(
+  pool: Pool,
   id: number,
   estado: RodadaEstado,
   relogio: Relogio,
-): void {
+  userId: number,
+): Promise<void> {
   const finalizada = encerrada(estado, relogio);
 
-  const atualizarRodada = db.prepare<{
-    id: number;
-    indice_atual: number;
-    esgotou_tempo: number;
-    status: string;
-    decorrido_segundos: number | null;
-  }>(`
-    UPDATE rodadas
-    SET indice_atual = @indice_atual,
-        esgotou_tempo = @esgotou_tempo,
-        status = @status,
-        decorrido_segundos = @decorrido_segundos
-    WHERE id = @id
-  `);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  const atualizarQuestao = db.prepare<{
-    rodada_id: number;
-    posicao: number;
-    resposta: string | null;
-    segundos: number;
-  }>(`
-    UPDATE questoes_rodada
-    SET resposta = @resposta, segundos = @segundos
-    WHERE rodada_id = @rodada_id AND posicao = @posicao
-  `);
+    const resultadoRodada = await client.query(
+      `UPDATE rodadas
+       SET indice_atual = $1,
+           esgotou_tempo = $2,
+           status = $3,
+           decorrido_segundos = $4
+       WHERE id = $5 AND user_id = $6`,
+      [
+        estado.indice,
+        estado.esgotouTempo,
+        finalizada ? "finalizada" : "em_andamento",
+        finalizada ? decorridoDominio(estado, relogio) : null,
+        id,
+        userId,
+      ],
+    );
 
-  const salvarTudo = db.transaction(() => {
-    atualizarRodada.run({
-      id,
-      indice_atual: estado.indice,
-      esgotou_tempo: estado.esgotouTempo ? 1 : 0,
-      status: finalizada ? "finalizada" : "em_andamento",
-      decorrido_segundos: finalizada ? decorridoDominio(estado, relogio) : null,
-    });
+    if (resultadoRodada.rowCount === 0) {
+      throw new Error(
+        `salvarRodada: rodada ${id} não encontrada para o usuário ${userId} — nada foi salvo`,
+      );
+    }
 
-    estado.questoes.forEach((_q, posicao) => {
-      atualizarQuestao.run({
-        rodada_id: id,
-        posicao,
-        resposta: estado.respostas[posicao],
-        segundos: estado.tempos[posicao],
-      });
-    });
-  });
+    for (let posicao = 0; posicao < estado.questoes.length; posicao++) {
+      await client.query(
+        `UPDATE questoes_rodada
+         SET resposta = $1, segundos = $2
+         WHERE rodada_id = $3 AND posicao = $4`,
+        [estado.respostas[posicao], estado.tempos[posicao], id, posicao],
+      );
+    }
 
-  salvarTudo();
+    await client.query("COMMIT");
+  } catch (erro) {
+    await client.query("ROLLBACK");
+    throw erro;
+  } finally {
+    client.release();
+  }
 }

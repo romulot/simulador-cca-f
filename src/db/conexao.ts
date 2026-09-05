@@ -1,52 +1,45 @@
-/** Conexão SQLite singleton do processo Next.js.
+/** Pool de conexões Postgres singleton do processo Next.js.
  *
- * O caminho do arquivo `.db` é configurável via `SIMULADOR_DB_PATH`, com
- * default `./data/simulador.db` (relativo à raiz do projeto — mesma
- * convenção de `process.cwd()` usada em `migrate.ts` e em
- * `src/lib/parser/parser.ts`). O diretório do arquivo é criado se ainda não
- * existir.
+ * `DATABASE_URL` aponta para o Postgres (Neon em produção — usar o
+ * endpoint com pooler, host com sufixo `-pooler`; um Postgres local em
+ * dev/test). SSL é decidido pela própria connection string (`sslmode=...`),
+ * não fixado aqui, para funcionar igual local (sem SSL) e na Neon (SSL
+ * obrigatório).
  *
- * A instância é guardada em `globalThis` (não só num módulo-nível `let`)
- * porque, em dev, o Fast Refresh do Next.js pode reavaliar este módulo mais
- * de uma vez no mesmo processo — sem isso, cada reavaliação abriria uma
- * conexão nova e vazaria a anterior.
+ * O pool e a promise de migração são guardados em `globalThis` (não só num
+ * módulo-nível `let`) porque, em dev, o Fast Refresh do Next.js pode
+ * reavaliar este módulo mais de uma vez no mesmo processo — sem isso, cada
+ * reavaliação abriria um pool novo e vazaria o anterior, e a migração
+ * rodaria mais de uma vez concorrentemente.
  */
-import Database from "better-sqlite3";
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { Pool } from "pg";
 
 import { migrar } from "./migrate";
 
-const CAMINHO_PADRAO = join(process.cwd(), "data/simulador.db");
-
-function caminhoBanco(): string {
-  const configurado = process.env.SIMULADOR_DB_PATH;
-  return configurado && configurado.trim() !== ""
-    ? configurado
-    : CAMINHO_PADRAO;
-}
-
-function abrirConexao(): Database.Database {
-  const caminho = caminhoBanco();
-  const diretorio = dirname(caminho);
-  if (!existsSync(diretorio)) {
-    mkdirSync(diretorio, { recursive: true });
+function criarPool(): Pool {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString || connectionString.trim() === "") {
+    throw new Error(
+      "DATABASE_URL não configurada — necessária para conectar ao Postgres (Neon ou local).",
+    );
   }
-
-  const db = new Database(caminho);
-  db.pragma("foreign_keys = ON");
-  migrar(db);
-  return db;
+  return new Pool({ connectionString });
 }
 
 declare global {
   // eslint-disable-next-line no-var
-  var __simuladorDb: Database.Database | undefined;
+  var __simuladorPool: Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __simuladorMigracao: Promise<void> | undefined;
 }
 
-export function obterConexao(): Database.Database {
-  if (!globalThis.__simuladorDb) {
-    globalThis.__simuladorDb = abrirConexao();
+export async function obterConexao(): Promise<Pool> {
+  if (!globalThis.__simuladorPool) {
+    globalThis.__simuladorPool = criarPool();
   }
-  return globalThis.__simuladorDb;
+  if (!globalThis.__simuladorMigracao) {
+    globalThis.__simuladorMigracao = migrar(globalThis.__simuladorPool);
+  }
+  await globalThis.__simuladorMigracao;
+  return globalThis.__simuladorPool;
 }

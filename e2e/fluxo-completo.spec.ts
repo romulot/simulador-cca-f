@@ -1,13 +1,29 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-/** Fluxo completo: menu → seleção → rodada → resultado → histórico.
+/** Fluxo completo: cadastro → menu → seleção → rodada → resultado →
+ * histórico.
  *
  * Cobre o caminho feliz do app inteiro numa sessão de navegador real —
  * as rotas de API já têm sua própria suíte (Vitest, `yarn test`); este
  * teste garante que a integração entre elas e as 5 telas funciona de
  * ponta a ponta, incluindo o que só existe no navegador (navegação por
  * clique, atalhos de teclado, confirmação de finalização).
+ *
+ * Cada teste cadastra sua PRÓPRIA conta (email descartável) em vez de
+ * reaproveitar uma sessão fixa: como o app agora exige login, isso também
+ * garante isolamento entre execuções sem precisar limpar o banco entre
+ * elas (histórico de uma conta nova começa sempre vazio).
  */
+
+async function cadastrarNovoUsuario(page: Page): Promise<void> {
+  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@exemplo.invalido`;
+  await page.goto("/cadastro");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill("senha-de-teste-123");
+  await page.getByLabel("Confirmar senha").fill("senha-de-teste-123");
+  await page.getByRole("button", { name: "Criar conta" }).click();
+  await page.waitForURL("/");
+}
 
 test("menu → praticar → responder → finalizar → resultado → histórico", async ({ page }) => {
   const erros: string[] = [];
@@ -16,8 +32,8 @@ test("menu → praticar → responder → finalizar → resultado → histórico
   });
   page.on("pageerror", (err) => erros.push(String(err)));
 
-  await test.step("menu carrega com contagens", async () => {
-    await page.goto("/");
+  await test.step("cadastro autentica e leva ao menu", async () => {
+    await cadastrarNovoUsuario(page);
     await expect(page.getByRole("heading", { name: "Simulador CCA-F" })).toBeVisible();
     await expect(page.getByText(/simulados,.*questões/)).toBeVisible();
   });
@@ -82,7 +98,7 @@ test("menu → praticar → responder → finalizar → resultado → histórico
 });
 
 test("modo prova sorteia 60 questões e mostra o cronômetro regressivo", async ({ page }) => {
-  await page.goto("/");
+  await cadastrarNovoUsuario(page);
   await page.getByRole("button", { name: /Modo prova/ }).click();
   await page.waitForURL(/\/rodada\/\d+/);
   await expect(page.getByText("Questão 1/60")).toBeVisible();
@@ -91,6 +107,7 @@ test("modo prova sorteia 60 questões e mostra o cronômetro regressivo", async 
 });
 
 test("teclado: responder com a tecla A e navegar com as setas", async ({ page }) => {
+  await cadastrarNovoUsuario(page);
   await page.goto("/selecao");
   await page.locator("input[type=checkbox]:not([disabled])").first().check();
   await page.getByRole("button", { name: "Começar" }).click();

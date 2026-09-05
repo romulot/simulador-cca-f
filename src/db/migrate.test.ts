@@ -1,64 +1,41 @@
-import { describe, expect, it, afterEach } from "vitest";
-import Database from "better-sqlite3";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { Pool } from "pg";
 
+import { poolTeste, criarUsuarioTeste } from "./apoioTeste";
 import { migrar } from "./migrate";
 
 describe("migrate", () => {
-  let diretorioTemporario: string | undefined;
+  let pool: Pool;
 
-  afterEach(() => {
-    if (diretorioTemporario) {
-      rmSync(diretorioTemporario, { recursive: true, force: true });
-      diretorioTemporario = undefined;
-    }
+  beforeEach(async () => {
+    pool = await poolTeste();
   });
 
-  function bancoDeTeste(): { db: Database.Database; caminho: string } {
-    diretorioTemporario = mkdtempSync(join(tmpdir(), "simulador-db-test-"));
-    const caminho = join(diretorioTemporario, "teste.db");
-    const db = new Database(caminho);
-    db.pragma("foreign_keys = ON");
-    return { db, caminho };
-  }
+  it("cria as tabelas 'usuarios', 'rodadas' e 'questoes_rodada', sem erro", async () => {
+    await expect(migrar(pool)).resolves.not.toThrow();
 
-  it("cria as tabelas 'rodadas' e 'questoes_rodada' num arquivo novo, sem erro", () => {
-    const { db } = bancoDeTeste();
+    const tabelas = await pool.query<{ table_name: string }>(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+    );
+    const nomes = tabelas.rows.map((t) => t.table_name);
 
-    expect(() => migrar(db)).not.toThrow();
-
-    const tabelas = db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name",
-      )
-      .all() as Array<{ name: string }>;
-    const nomes = tabelas.map((t) => t.name);
-
+    expect(nomes).toContain("usuarios");
     expect(nomes).toContain("rodadas");
     expect(nomes).toContain("questoes_rodada");
-
-    db.close();
   });
 
-  it("aplicar a migração duas vezes seguidas no mesmo arquivo não falha (idempotência)", () => {
-    const { db } = bancoDeTeste();
-
-    migrar(db);
-    expect(() => migrar(db)).not.toThrow();
-
-    db.close();
+  it("aplicar a migração duas vezes seguidas não falha (idempotência)", async () => {
+    await migrar(pool);
+    await expect(migrar(pool)).resolves.not.toThrow();
   });
 
-  it("'questoes_rodada' tem todas as colunas do contrato, incluindo os 5 campos de metadados", () => {
-    const { db } = bancoDeTeste();
-    migrar(db);
+  it("'questoes_rodada' tem todas as colunas do contrato, incluindo os 5 campos de metadados", async () => {
+    await migrar(pool);
 
-    const colunas = db
-      .prepare("PRAGMA table_info(questoes_rodada)")
-      .all() as Array<{ name: string }>;
-    const nomes = colunas.map((c) => c.name);
+    const colunas = await pool.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'questoes_rodada' ORDER BY ordinal_position",
+    );
+    const nomes = colunas.rows.map((c) => c.column_name);
 
     expect(nomes).toEqual([
       "id",
@@ -80,21 +57,19 @@ describe("migrate", () => {
       "resposta",
       "segundos",
     ]);
-
-    db.close();
   });
 
-  it("'rodadas' tem todas as colunas do contrato", () => {
-    const { db } = bancoDeTeste();
-    migrar(db);
+  it("'rodadas' tem todas as colunas do contrato, incluindo 'user_id'", async () => {
+    await migrar(pool);
 
-    const colunas = db
-      .prepare("PRAGMA table_info(rodadas)")
-      .all() as Array<{ name: string }>;
-    const nomes = colunas.map((c) => c.name);
+    const colunas = await pool.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'rodadas' ORDER BY ordinal_position",
+    );
+    const nomes = colunas.rows.map((c) => c.column_name);
 
     expect(nomes).toEqual([
       "id",
+      "user_id",
       "modo",
       "iniciada_em",
       "limite_segundos",
@@ -106,60 +81,65 @@ describe("migrate", () => {
       "disponivel_json",
       "deficit_json",
     ]);
-
-    db.close();
   });
 
-  it("respeita ON DELETE CASCADE: apagar a rodada apaga as questões dela", () => {
-    const { db } = bancoDeTeste();
-    migrar(db);
+  it("respeita ON DELETE CASCADE: apagar a rodada apaga as questões dela", async () => {
+    await migrar(pool);
+    const userId = await criarUsuarioTeste(pool);
 
-    db.prepare(
-      `INSERT INTO rodadas (id, modo, iniciada_em, status, indice_atual)
-       VALUES (1, 'pratica', '2026-09-04T10:00:00', 'em_andamento', 0)`,
-    ).run();
-    db.prepare(
+    const resultado = await pool.query<{ id: number }>(
+      `INSERT INTO rodadas (user_id, modo, iniciada_em, status, indice_atual)
+       VALUES ($1, 'pratica', '2026-09-04T10:00:00', 'em_andamento', 0)
+       RETURNING id`,
+      [userId],
+    );
+    const rodadaId = resultado.rows[0].id;
+
+    await pool.query(
       `INSERT INTO questoes_rodada
          (rodada_id, posicao, origem, numero, enunciado, alternativas_json,
           correta, resumo, explicacoes_json, bloom, dificuldade, rubrica,
           cenario, principio_testado)
        VALUES
-         (1, 0, 'origem-teste', 1, 'enunciado', '{}', 'A', 'resumo', '{}',
+         ($1, 0, 'origem-teste', 1, 'enunciado', '{}', 'A', 'resumo', '{}',
           'Aplicar', 'media', 'rubrica', 'cenario', 'principio')`,
-    ).run();
-
-    db.prepare("DELETE FROM rodadas WHERE id = 1").run();
-
-    const restantes = db
-      .prepare("SELECT COUNT(*) AS n FROM questoes_rodada")
-      .get() as { n: number };
-    expect(restantes.n).toBe(0);
-
-    db.close();
-  });
-
-  it("índice único em (rodada_id, posicao) rejeita posição duplicada na mesma rodada", () => {
-    const { db } = bancoDeTeste();
-    migrar(db);
-
-    db.prepare(
-      `INSERT INTO rodadas (id, modo, iniciada_em, status, indice_atual)
-       VALUES (1, 'prova', '2026-09-04T10:00:00', 'em_andamento', 0)`,
-    ).run();
-
-    const inserir = db.prepare(
-      `INSERT INTO questoes_rodada
-         (rodada_id, posicao, origem, numero, enunciado, alternativas_json,
-          correta, resumo, explicacoes_json, bloom, dificuldade, rubrica,
-          cenario, principio_testado)
-       VALUES
-         (1, 0, 'origem-teste', 1, 'enunciado', '{}', 'A', 'resumo', '{}',
-          'Aplicar', 'media', 'rubrica', 'cenario', 'principio')`,
+      [rodadaId],
     );
 
-    inserir.run();
-    expect(() => inserir.run()).toThrow();
+    await pool.query("DELETE FROM rodadas WHERE id = $1", [rodadaId]);
 
-    db.close();
+    const restantes = await pool.query<{ n: string }>(
+      "SELECT COUNT(*) AS n FROM questoes_rodada WHERE rodada_id = $1",
+      [rodadaId],
+    );
+    expect(Number(restantes.rows[0].n)).toBe(0);
+  });
+
+  it("índice único em (rodada_id, posicao) rejeita posição duplicada na mesma rodada", async () => {
+    await migrar(pool);
+    const userId = await criarUsuarioTeste(pool);
+
+    const resultado = await pool.query<{ id: number }>(
+      `INSERT INTO rodadas (user_id, modo, iniciada_em, status, indice_atual)
+       VALUES ($1, 'prova', '2026-09-04T10:00:00', 'em_andamento', 0)
+       RETURNING id`,
+      [userId],
+    );
+    const rodadaId = resultado.rows[0].id;
+
+    const inserir = () =>
+      pool.query(
+        `INSERT INTO questoes_rodada
+           (rodada_id, posicao, origem, numero, enunciado, alternativas_json,
+            correta, resumo, explicacoes_json, bloom, dificuldade, rubrica,
+            cenario, principio_testado)
+         VALUES
+           ($1, 0, 'origem-teste', 1, 'enunciado', '{}', 'A', 'resumo', '{}',
+            'Aplicar', 'media', 'rubrica', 'cenario', 'principio')`,
+        [rodadaId],
+      );
+
+    await inserir();
+    await expect(inserir()).rejects.toThrow();
   });
 });

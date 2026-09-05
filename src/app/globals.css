@@ -370,6 +370,35 @@ a {
   font-size: 0.85em;
 }
 
+/* -- campos de formulário (telas de login/cadastro) ----------------------- */
+
+.rotulo {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--fraco);
+  margin-bottom: 0.35em;
+}
+
+.campo {
+  width: 100%;
+  font-family: var(--fonte-mono);
+  font-size: 0.95rem;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--borda);
+  background: var(--painel-fraco);
+  color: var(--papel);
+  padding: 0.7em 0.9em;
+}
+
+.campo::placeholder {
+  color: var(--fraco);
+}
+
+.campo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* -- utilitários ----------------------------------------------------------- */
 
 .pilha {

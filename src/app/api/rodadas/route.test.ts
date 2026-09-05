@@ -1,33 +1,36 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { beforeEach, describe, expect, it } from "vitest";
 
-let diretorioTemporario: string;
+import { poolTeste, criarUsuarioTeste } from "@/db/apoioTeste";
+import { cookieSessaoTeste } from "@/lib/auth/apoioTeste";
 
-// Redireciona a conexão singleton (src/db/conexao.ts) para um arquivo
-// temporário ANTES de qualquer chamada a obterConexao() (que só acontece
-// dentro do handler POST, nunca em tempo de import) — isolando os testes
-// deste arquivo do banco de desenvolvimento real.
-beforeAll(() => {
-  diretorioTemporario = mkdtempSync(join(tmpdir(), "simulador-api-rodadas-test-"));
-  process.env.SIMULADOR_DB_PATH = join(diretorioTemporario, "teste.db");
+let userId: number;
+
+beforeEach(async () => {
+  const pool = await poolTeste();
+  userId = await criarUsuarioTeste(pool);
 });
 
-afterAll(() => {
-  rmSync(diretorioTemporario, { recursive: true, force: true });
-  delete process.env.SIMULADOR_DB_PATH;
-});
-
-function requisicao(corpo: unknown): Request {
+function requisicao(corpo: unknown, cookie = cookieSessaoTeste(userId)): Request {
   return new Request("http://localhost/api/rodadas", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", cookie },
     body: JSON.stringify(corpo),
   });
 }
 
 describe("POST /api/rodadas", () => {
+  it("sem sessão devolve 401", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(
+      new Request("http://localhost/api/rodadas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ modo: "prova" }),
+      }),
+    );
+    expect(resposta.status).toBe(401);
+  });
+
   it("modo pratica com pares válidos cria rodada com a soma exata de questões, sem vazar a resposta certa", async () => {
     const { POST } = await import("./route");
     const resposta = await POST(
@@ -98,7 +101,7 @@ describe("POST /api/rodadas", () => {
     const resposta = await POST(
       new Request("http://localhost/api/rodadas", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", cookie: cookieSessaoTeste(userId) },
         body: "{ isso não é json",
       }),
     );

@@ -9,15 +9,16 @@
  * domínio, método do maior resto, déficit nunca redistribuído) sobre TODO o
  * corpus válido disponível.
  *
- * Em ambos os casos, grava a rodada via `repositorioRodadas.criarRodada` e
- * devolve só a PRIMEIRA questão, já sanitizada (`paraQuestaoCliente` —
- * nunca a resposta certa).
+ * Em ambos os casos, grava a rodada via `repositorioRodadas.criarRodada`
+ * (associada ao usuário da sessão) e devolve só a PRIMEIRA questão, já
+ * sanitizada (`paraQuestaoCliente` — nunca a resposta certa).
  */
 import { NextResponse } from "next/server";
 
 import { descobrir } from "@/lib/catalogo";
 import { obterConexao } from "@/db/conexao";
 import { carregarRodada, criarRodada } from "@/db/repositorioRodadas";
+import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
 import { criarRngPadrao, embaralhar, LIMITE_SEGUNDOS, pool, sortear } from "@/domain/sorteio";
 import { paraQuestaoCliente } from "@/lib/api/questaoCliente";
 import type { Questao } from "@/lib/parser/tipos";
@@ -34,6 +35,11 @@ function respostaErro(status: number, mensagem: string) {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const userId = obterUsuarioIdDaSessao(request);
+  if (userId === null) {
+    return respostaErro(401, "não autenticado");
+  }
+
   let corpo: unknown;
   try {
     corpo = await request.json();
@@ -96,8 +102,9 @@ export async function POST(request: Request): Promise<Response> {
     limiteSegundos = null;
   }
 
-  const db = obterConexao();
-  const rodadaId = criarRodada(db, {
+  const db = await obterConexao();
+  const rodadaId = await criarRodada(db, {
+    userId,
     questoes,
     modo,
     limiteSegundos,
@@ -114,7 +121,7 @@ export async function POST(request: Request): Promise<Response> {
   // Recarrega em vez de reaproveitar `questoes` em memória: garante que a
   // primeira questão devolvida é exatamente a que ficou gravada na posição
   // 0 (mesma fonte da verdade que qualquer requisição futura de navegação).
-  const persistida = carregarRodada(db, rodadaId)!;
+  const persistida = (await carregarRodada(db, rodadaId, userId))!;
 
   return NextResponse.json(
     {

@@ -21,14 +21,19 @@
  * `RodadaEstado.marcaEm` em `src/domain/rodada.ts`). O que NUNCA vem do
  * cliente é se o tempo da PROVA esgotou — isso é sempre recomputado a
  * partir de `iniciada_em` (ver `encerrada()`/`GET /api/rodadas/:id`).
+ *
+ * Ambas as rotas exigem sessão e só enxergam rodadas do próprio usuário
+ * (id de outro dono devolve 404, igual a "não existe").
  */
 import { NextResponse } from "next/server";
 
 import { obterConexao } from "@/db/conexao";
 import { carregarRodada, salvarRodada } from "@/db/repositorioRodadas";
+import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
 import { encerrada, irPara, relogioPadrao, responder, type RodadaEstado } from "@/domain/rodada";
 import { paraQuestaoCliente } from "@/lib/api/questaoCliente";
 import type { Letra } from "@/lib/parser/tipos";
+import type { Pool } from "pg";
 
 const LETRAS_VALIDAS = new Set(["A", "B", "C", "D"]);
 
@@ -41,25 +46,32 @@ interface ParamsRota {
 }
 
 interface ContextoValido {
-  db: ReturnType<typeof obterConexao>;
+  db: Pool;
   id: number;
+  userId: number;
   estado: RodadaEstado;
   indice: number;
 }
 
-/** Resolve e valida id/índice comuns a GET e POST; devolve a resposta de
- * erro pronta quando algo não bate. */
-function carregarContexto(
+/** Resolve e valida sessão/id/índice comuns a GET e POST; devolve a
+ * resposta de erro pronta quando algo não bate. */
+async function carregarContexto(
+  request: Request,
   idParam: string,
   indiceParam: string,
-): { erro: Response } | { erro?: undefined; contexto: ContextoValido } {
+): Promise<{ erro: Response } | { erro?: undefined; contexto: ContextoValido }> {
+  const userId = obterUsuarioIdDaSessao(request);
+  if (userId === null) {
+    return { erro: erro(401, "não autenticado") };
+  }
+
   const id = Number(idParam);
   if (!Number.isInteger(id) || id <= 0) {
     return { erro: erro(400, "id inválido") };
   }
 
-  const db = obterConexao();
-  const persistida = carregarRodada(db, id);
+  const db = await obterConexao();
+  const persistida = await carregarRodada(db, id, userId);
   if (!persistida) {
     return { erro: erro(404, "rodada não encontrada") };
   }
@@ -69,12 +81,12 @@ function carregarContexto(
     return { erro: erro(400, "índice fora da faixa da rodada") };
   }
 
-  return { contexto: { db, id, estado: persistida.estado, indice } };
+  return { contexto: { db, id, userId, estado: persistida.estado, indice } };
 }
 
-export async function GET(_request: Request, { params }: ParamsRota): Promise<Response> {
+export async function GET(request: Request, { params }: ParamsRota): Promise<Response> {
   const { id: idParam, indice: indiceParam } = await params;
-  const resultado = carregarContexto(idParam, indiceParam);
+  const resultado = await carregarContexto(request, idParam, indiceParam);
   if (resultado.erro) return resultado.erro;
 
   const { estado, indice } = resultado.contexto;
@@ -98,9 +110,9 @@ function corpoValido(corpo: unknown): corpo is CorpoAcao {
 
 export async function POST(request: Request, { params }: ParamsRota): Promise<Response> {
   const { id: idParam, indice: indiceParam } = await params;
-  const resultado = carregarContexto(idParam, indiceParam);
+  const resultado = await carregarContexto(request, idParam, indiceParam);
   if (resultado.erro) return resultado.erro;
-  const { db, id, estado: estadoCarregado, indice } = resultado.contexto;
+  const { db, id, userId, estado: estadoCarregado, indice } = resultado.contexto;
 
   const relogio = relogioPadrao();
 
@@ -155,7 +167,7 @@ export async function POST(request: Request, { params }: ParamsRota): Promise<Re
     return erro(400, "informe 'resposta' ou 'destino'");
   }
 
-  salvarRodada(db, id, estado, relogio);
+  await salvarRodada(db, id, estado, relogio, userId);
 
   return NextResponse.json({
     indiceAtual: estado.indice,

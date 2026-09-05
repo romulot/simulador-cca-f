@@ -4,11 +4,15 @@
  * adivinhar nada: índice atual, respostas já dadas, tempo restante
  * (RECOMPUTADO aqui, a partir de `iniciada_em` — nunca aceito do cliente),
  * e a questão atual já sanitizada (nunca a resposta certa).
+ *
+ * Uma rodada de outro usuário devolve 404 — mesmo tratamento de "não
+ * existe" (nunca revela que o id pertence a outra conta).
  */
 import { NextResponse } from "next/server";
 
 import { obterConexao } from "@/db/conexao";
 import { carregarRodada } from "@/db/repositorioRodadas";
+import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
 import { atual, decorrido, encerrada, relogioPadrao, restante } from "@/domain/rodada";
 import { paraQuestaoCliente } from "@/lib/api/questaoCliente";
 
@@ -17,17 +21,22 @@ function erro(status: number, mensagem: string) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
+  const userId = obterUsuarioIdDaSessao(request);
+  if (userId === null) {
+    return erro(401, "não autenticado");
+  }
+
   const { id: idParam } = await params;
   const id = Number(idParam);
   if (!Number.isInteger(id) || id <= 0) {
     return erro(400, "id inválido");
   }
 
-  const db = obterConexao();
-  const persistida = carregarRodada(db, id);
+  const db = await obterConexao();
+  const persistida = await carregarRodada(db, id, userId);
   if (!persistida) {
     return erro(404, "rodada não encontrada");
   }

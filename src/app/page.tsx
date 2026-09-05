@@ -80,14 +80,25 @@ export default function Menu() {
   const carregando = totais === null;
   const semConteudo = totais !== null && totais.paresValidos === 0;
 
+  async function sair() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
+
   return (
     <main className="pagina">
       <div className="envelope">
-        <header>
-          <h1>Simulador CCA-F</h1>
-          <p className="texto-fraco">
-            Prática e simulado da certificação Claude Architect Foundation.
-          </p>
+        <header className="espaco-entre" style={{ alignItems: "flex-start" }}>
+          <div>
+            <h1>Simulador CCA-F</h1>
+            <p className="texto-fraco">
+              Prática e simulado da certificação Claude Architect Foundation.
+            </p>
+          </div>
+          <button type="button" className="botao botao-fantasma" onClick={sair}>
+            Sair
+          </button>
         </header>
 
         <div className="painel pilha">

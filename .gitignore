@@ -16,11 +16,6 @@ out/
 .yarn/install-state.gz
 .pnp.*
 
-# database
-data/
-*.db
-*.db-journal
-
 # env
 .env*.local
 .env

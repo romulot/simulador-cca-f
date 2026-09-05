@@ -8,9 +8,12 @@ import { defineConfig } from "@playwright/test";
  * conexão de WebSocket (HMR) sempre aberta, o que tende a deixar
  * comandos como `waitForLoadState("networkidle")` presos para sempre.
  *
- * Isolado do banco de desenvolvimento via `SIMULADOR_DB_PATH` apontando
- * para um arquivo dedicado ao E2E (apagado antes de cada execução pelo
- * script `test:e2e`, ver package.json).
+ * Usa o mesmo Postgres local dos testes unitários (`DATABASE_URL` — ver
+ * `vitest.config.mts` e README, seção "Desenvolvimento local"). Não há mais
+ * arquivo de banco a apagar entre execuções: cada teste cadastra sua
+ * própria conta com email descartável (ver `e2e/fluxo-completo.spec.ts`),
+ * então dados de execuções anteriores nunca aparecem no histórico de uma
+ * conta nova.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -27,7 +30,9 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 30_000,
     env: {
-      SIMULADOR_DB_PATH: "./data/e2e-test.db",
+      DATABASE_URL:
+        process.env.DATABASE_URL ?? "postgres://postgres:simulador@localhost:5433/simulador",
+      SESSION_SECRET: process.env.SESSION_SECRET ?? "segredo-de-teste-nao-usar-em-producao",
     },
   },
 });

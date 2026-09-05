@@ -8,8 +8,11 @@
  * inesperado) aparece na listagem com `erro` preenchido em vez de
  * derrubar a listagem inteira — mesmo tratamento que o Python dá a um
  * snapshot ilegível.
+ *
+ * Toda função recebe `userId`: histórico é sempre o de UM usuário, nunca
+ * global — isolamento herdado de `carregarRodada`/`rodadas.user_id`.
  */
-import type Database from "better-sqlite3";
+import type { Pool } from "pg";
 
 import { placar as placarDominio, relogioInerte, type Modo, type Placar } from "@/domain/rodada";
 import { carregarRodada } from "./repositorioRodadas";
@@ -35,10 +38,11 @@ function origensDistintas(origens: string[]): string[] {
 
 /** Uma entrada do histórico a partir do id, com leitura defensiva: qualquer
  * erro de dado (não de programação) vira `erro` preenchido, não exceção. */
-export function carregarEntradaHistorico(
-  db: Database.Database,
+export async function carregarEntradaHistorico(
+  pool: Pool,
   id: number,
-): EntradaHistorico | null {
+  userId: number,
+): Promise<EntradaHistorico | null> {
   const vazia: Omit<EntradaHistorico, "erro"> = {
     id,
     quando: null,
@@ -50,7 +54,7 @@ export function carregarEntradaHistorico(
 
   let persistida;
   try {
-    persistida = carregarRodada(db, id);
+    persistida = await carregarRodada(pool, id, userId);
   } catch (erro) {
     return { ...vazia, erro: `rodada ilegível: ${(erro as Error).message}` };
   }
@@ -75,36 +79,48 @@ export function carregarEntradaHistorico(
   }
 }
 
-/** Rodadas finalizadas, da mais recente para a mais antiga (por id — igual
- * à ordem cronológica, já que `id` é AUTOINCREMENT). */
-export function listarHistorico(db: Database.Database): EntradaHistorico[] {
-  const linhas = db
-    .prepare("SELECT id FROM rodadas WHERE status = 'finalizada' ORDER BY id DESC")
-    .all() as Array<{ id: number }>;
+/** Rodadas finalizadas de `userId`, da mais recente para a mais antiga (por
+ * id — igual à ordem cronológica, já que `id` é `GENERATED ALWAYS AS
+ * IDENTITY`). */
+export async function listarHistorico(pool: Pool, userId: number): Promise<EntradaHistorico[]> {
+  const resultado = await pool.query<{ id: number }>(
+    "SELECT id FROM rodadas WHERE user_id = $1 AND status = 'finalizada' ORDER BY id DESC",
+    [userId],
+  );
 
-  return linhas
-    .map((linha) => carregarEntradaHistorico(db, linha.id))
-    .filter((entrada): entrada is EntradaHistorico => entrada !== null);
+  const entradas: EntradaHistorico[] = [];
+  for (const linha of resultado.rows) {
+    const entrada = await carregarEntradaHistorico(pool, linha.id, userId);
+    if (entrada !== null) entradas.push(entrada);
+  }
+  return entradas;
 }
 
-/** A rodada finalizada mais recente, ou `null` se não houver nenhuma.
+/** A rodada finalizada mais recente de `userId`, ou `null` se não houver
+ * nenhuma.
  *
  * Só abre 1 linha (não todas como `listarHistorico`) — para o painel
  * "última rodada" do menu, que precisa de uma rodada só.
  */
-export function ultimaEntradaHistorico(db: Database.Database): EntradaHistorico | null {
-  const linha = db
-    .prepare("SELECT id FROM rodadas WHERE status = 'finalizada' ORDER BY id DESC LIMIT 1")
-    .get() as { id: number } | undefined;
+export async function ultimaEntradaHistorico(
+  pool: Pool,
+  userId: number,
+): Promise<EntradaHistorico | null> {
+  const resultado = await pool.query<{ id: number }>(
+    "SELECT id FROM rodadas WHERE user_id = $1 AND status = 'finalizada' ORDER BY id DESC LIMIT 1",
+    [userId],
+  );
+  const linha = resultado.rows[0];
   if (!linha) return null;
-  return carregarEntradaHistorico(db, linha.id);
+  return carregarEntradaHistorico(pool, linha.id, userId);
 }
 
-/** Quantas rodadas finalizadas existem, sem abrir nenhuma (para redesenhos
- * frequentes de tela que só precisam da contagem). */
-export function contarHistorico(db: Database.Database): number {
-  const linha = db
-    .prepare("SELECT COUNT(*) AS n FROM rodadas WHERE status = 'finalizada'")
-    .get() as { n: number };
-  return linha.n;
+/** Quantas rodadas finalizadas de `userId` existem, sem abrir nenhuma (para
+ * redesenhos frequentes de tela que só precisam da contagem). */
+export async function contarHistorico(pool: Pool, userId: number): Promise<number> {
+  const resultado = await pool.query<{ n: string }>(
+    "SELECT COUNT(*) AS n FROM rodadas WHERE user_id = $1 AND status = 'finalizada'",
+    [userId],
+  );
+  return Number(resultado.rows[0].n);
 }
