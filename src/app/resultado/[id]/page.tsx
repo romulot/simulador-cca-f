@@ -16,6 +16,8 @@ import Link from "next/link";
 import { Barra } from "@/components/Barra";
 import { formatarData, formatarPercentual, mmss } from "@/lib/formatacao";
 import { PESOS } from "@/domain/sorteio";
+import { topicoPorNome } from "@/domain/topicos";
+import { recursosPorTopico } from "@/data/recursos";
 
 type Letra = "A" | "B" | "C" | "D";
 
@@ -36,6 +38,7 @@ interface QuestaoDetalhe {
     cenario: string;
     principioTestado: string;
   };
+  topicos: string[];
   resposta: Letra | null;
   segundos: number;
 }
@@ -278,6 +281,54 @@ export default function TelaResultado() {
                     );
                   })}
                 </div>
+
+                {q.topicos.length > 0 && (
+                  <div className="pilha" style={{ marginTop: "0.5em" }}>
+                    <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
+                      Tópicos relacionados
+                    </p>
+                    <div className="linha" style={{ flexWrap: "wrap" }}>
+                      {q.topicos.map((topico) => (
+                        <span key={topico} className="badge badge-neutro">
+                          {topico}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(() => {
+                  const vistos = new Set<string>();
+                  const materiais = q.topicos
+                    .map((nome) => topicoPorNome(nome))
+                    .filter((t) => t !== undefined)
+                    .flatMap((topico) => recursosPorTopico(topico.id))
+                    .filter((r) => (vistos.has(r.url) ? false : (vistos.add(r.url), true)));
+                  if (materiais.length === 0) return null;
+                  return (
+                    <div className="pilha" style={{ marginTop: "0.5em" }}>
+                      <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
+                        Material recomendado
+                      </p>
+                      <div className="pilha">
+                        {materiais.map((recurso) => (
+                          <a
+                            key={recurso.id}
+                            href={recurso.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="texto-pequeno"
+                          >
+                            {recurso.tipo === "video" ? "🎥" : "📖"} {recurso.titulo}
+                            <span className="badge badge-neutro" style={{ marginLeft: "0.5em" }}>
+                              {recurso.oficial ? `Oficial — ${recurso.fonte}` : "Material complementar"}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </article>
             ))}
           </section>

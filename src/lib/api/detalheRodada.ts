@@ -22,6 +22,7 @@ export interface QuestaoDetalhe {
   resumo: string;
   explicacoes: AlternativasPorLetra;
   metadados: MetadadosQuestao;
+  topicos: string[];
   resposta: Letra | null;
   segundos: number;
 }
@@ -60,6 +61,7 @@ export function montarDetalheRodada(persistida: RodadaPersistida): DetalheRodada
     resumo: q.resumo,
     explicacoes: q.explicacoes,
     metadados: q.metadados,
+    topicos: q.topicos,
     resposta: estado.respostas[posicao],
     segundos: estado.tempos[posicao],
   }));
