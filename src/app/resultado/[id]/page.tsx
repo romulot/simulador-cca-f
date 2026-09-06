@@ -10,7 +10,7 @@
  * contexto.
  */
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { Barra } from "@/components/Barra";
@@ -78,8 +78,33 @@ function agregarPor<T extends string>(
 
 export default function TelaResultado() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [detalhe, setDetalhe] = useState<DetalheRodada | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [praticando, setPraticando] = useState<string | null>(null);
+  const [erroPratica, setErroPratica] = useState<string | null>(null);
+
+  async function praticarTopico(topicoId: string) {
+    setPraticando(topicoId);
+    setErroPratica(null);
+    try {
+      const resposta = await fetch("/api/rodadas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ modo: "pratica", topicoId }),
+      });
+      const corpo = await resposta.json();
+      if (!resposta.ok) {
+        setErroPratica(corpo.erro ?? "não foi possível iniciar a prática");
+        setPraticando(null);
+        return;
+      }
+      router.push(`/rodada/${corpo.rodadaId}`);
+    } catch {
+      setErroPratica("falha de rede ao iniciar a prática");
+      setPraticando(null);
+    }
+  }
 
   useEffect(() => {
     fetch(`/api/historico/${params.id}`)
@@ -287,12 +312,25 @@ export default function TelaResultado() {
                     <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
                       Tópicos relacionados
                     </p>
-                    <div className="linha" style={{ flexWrap: "wrap" }}>
-                      {q.topicos.map((topico) => (
-                        <span key={topico} className="badge badge-neutro">
-                          {topico}
-                        </span>
-                      ))}
+                    <div className="pilha">
+                      {q.topicos.map((nome) => {
+                        const topico = topicoPorNome(nome);
+                        return (
+                          <div key={nome} className="espaco-entre">
+                            <span className="badge badge-neutro">{nome}</span>
+                            {topico && (
+                              <button
+                                type="button"
+                                className="botao botao-fantasma"
+                                disabled={praticando !== null}
+                                onClick={() => praticarTopico(topico.id)}
+                              >
+                                {praticando === topico.id ? "Preparando…" : "Praticar este tópico"}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -331,6 +369,11 @@ export default function TelaResultado() {
                 })()}
               </article>
             ))}
+            {erroPratica && (
+              <p className="texto-pequeno" style={{ color: "var(--erro)" }} role="alert">
+                {erroPratica}
+              </p>
+            )}
           </section>
         )}
       </div>
