@@ -40,6 +40,9 @@ export default function Menu() {
   const [totalRodadas, setTotalRodadas] = useState(0);
   const [iniciandoProva, setIniciandoProva] = useState(false);
   const [erroProva, setErroProva] = useState<string | null>(null);
+  const [emRevisao, setEmRevisao] = useState(0);
+  const [iniciandoRevisao, setIniciandoRevisao] = useState(false);
+  const [erroRevisao, setErroRevisao] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/catalogo")
@@ -53,7 +56,33 @@ export default function Menu() {
         setTotalRodadas(entradas.length);
         setUltima(entradas[0] ?? null);
       });
+
+    fetch("/api/aprendizado/resumo")
+      .then((r) => r.json())
+      .then((corpo) => setEmRevisao(corpo.emRevisao ?? 0));
   }, []);
+
+  async function iniciarRevisao() {
+    setIniciandoRevisao(true);
+    setErroRevisao(null);
+    try {
+      const resposta = await fetch("/api/rodadas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ modo: "pratica", revisao: true }),
+      });
+      const corpo = await resposta.json();
+      if (!resposta.ok) {
+        setErroRevisao(corpo.erro ?? "não foi possível iniciar a revisão");
+        setIniciandoRevisao(false);
+        return;
+      }
+      router.push(`/rodada/${corpo.rodadaId}`);
+    } catch {
+      setErroRevisao("falha de rede ao iniciar a revisão");
+      setIniciandoRevisao(false);
+    }
+  }
 
   async function iniciarProva() {
     setIniciandoProva(true);
@@ -150,7 +179,41 @@ export default function Menu() {
             Histórico
             <span className="texto-pequeno"> — {totalRodadas} rodadas</span>
           </Link>
+
+          <Link
+            href="/desempenho"
+            className={`botao botao-bloco${totalRodadas === 0 ? " botao-desabilitado" : ""}`}
+            aria-disabled={totalRodadas === 0}
+            tabIndex={totalRodadas === 0 ? -1 : undefined}
+            onClick={(e) => totalRodadas === 0 && e.preventDefault()}
+          >
+            Meus pontos fracos
+          </Link>
         </div>
+
+        {emRevisao > 0 && (
+          <section className="painel pilha" aria-labelledby="revisao-titulo">
+            <div className="painel-titulo">
+              <h2 id="revisao-titulo">Revisar meus erros</h2>
+            </div>
+            <div className="espaco-entre">
+              <span>{emRevisao} questão(ões) aguardando revisão</span>
+              <button
+                type="button"
+                className="botao botao-primario"
+                disabled={iniciandoRevisao}
+                onClick={iniciarRevisao}
+              >
+                {iniciandoRevisao ? "Preparando…" : "Revisar meus erros"}
+              </button>
+            </div>
+            {erroRevisao && (
+              <p className="texto-pequeno" style={{ color: "var(--erro)" }} role="alert">
+                {erroRevisao}
+              </p>
+            )}
+          </section>
+        )}
 
         {ultima && ultima.placar && (
           <section className="painel" aria-labelledby="ultima-rodada-titulo">

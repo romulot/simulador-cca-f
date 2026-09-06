@@ -87,6 +87,74 @@ describe("POST /api/rodadas", () => {
     expect(somaCotas).toBe(60);
   });
 
+  it("modo pratica com 'topicoId' seleciona só questões daquele tópico", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "pratica", topicoId: "hooks", quantidade: 3 }));
+
+    expect(resposta.status).toBe(201);
+    const corpo = await resposta.json();
+    expect(corpo.modo).toBe("pratica");
+    expect(corpo.totalQuestoes).toBeLessThanOrEqual(3);
+    expect(corpo.totalQuestoes).toBeGreaterThan(0);
+    expect(corpo.limiteSegundos).toBeNull();
+  });
+
+  it("modo pratica com 'topicoId' desconhecido retorna 400", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "pratica", topicoId: "topico-que-nao-existe" }));
+    expect(resposta.status).toBe(400);
+  });
+
+  it("modo pratica com 'topicoId' e 'quantidade' inválida (0 ou negativa) retorna 400", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "pratica", topicoId: "hooks", quantidade: 0 }));
+    expect(resposta.status).toBe(400);
+  });
+
+  it("modo pratica com mais de uma forma de seleção (pares + topicoId) retorna 400", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(
+      requisicao({ modo: "pratica", pares: ["1.1_loop_agentico"], topicoId: "hooks" }),
+    );
+    expect(resposta.status).toBe(400);
+  });
+
+  it("modo pratica com 'revisao' sem nenhuma questão errada anteriormente retorna 422", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "pratica", revisao: true }));
+    expect(resposta.status).toBe(422);
+  });
+
+  it("modo pratica com 'revisao' seleciona questão cuja última tentativa foi errada", async () => {
+    const { descobrir } = await import("@/lib/catalogo");
+    const { criarRodada: criarRodadaPersistida, salvarRodada } = await import("@/db/repositorioRodadas");
+    const { criarRodada: criarEstado, iniciar, responder, encerrar } = await import("@/domain/rodada");
+    const { obterConexao } = await import("@/db/conexao");
+
+    const par = descobrir().find((p) => p.erro === null)!;
+    const questao = par.questoes[0];
+    const errada = (["A", "B", "C", "D"] as const).find((l) => l !== questao.correta)!;
+
+    const db = await obterConexao();
+    const id = await criarRodadaPersistida(db, {
+      userId,
+      questoes: [questao],
+      modo: "pratica",
+      limiteSegundos: null,
+    });
+    const relogio = () => 10;
+    let estado = iniciar(criarEstado([questao], { embaralhar: false }), relogio);
+    estado = responder(estado, errada, relogio);
+    estado = encerrar(estado, relogio);
+    await salvarRodada(db, id, estado, relogio, userId);
+
+    const { POST } = await import("./route");
+    const respostaRevisao = await POST(requisicao({ modo: "pratica", revisao: true }));
+    expect(respostaRevisao.status).toBe(201);
+    const corpo = await respostaRevisao.json();
+    expect(corpo.totalQuestoes).toBe(1);
+  });
+
   it("'modo' ausente ou inválido retorna 400", async () => {
     const { POST } = await import("./route");
     const ausente = await POST(requisicao({}));
