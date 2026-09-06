@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { NOME_COOKIE_SESSAO } from "@/lib/auth/sessao";
+import { limparRateLimitParaTeste } from "@/lib/auth/rateLimit";
+
+beforeEach(limparRateLimitParaTeste);
 
 function post(url: string, corpo: unknown): Request {
   return new Request(url, {

@@ -27,9 +27,7 @@ function criarPool(): Pool {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
   var __simuladorPool: Pool | undefined;
-  // eslint-disable-next-line no-var
   var __simuladorMigracao: Promise<void> | undefined;
 }
 

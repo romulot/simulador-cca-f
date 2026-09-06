@@ -35,7 +35,7 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Ques
 
 async function rodadaFinalizada(questoes: Questao[], dono = userId) {
   const { obterConexao } = await import("@/db/conexao");
-  const { criarRodada, carregarRodada, salvarRodada } = await import("@/db/repositorioRodadas");
+  const { criarRodada, salvarRodada } = await import("@/db/repositorioRodadas");
   const { encerrar, iniciar, criarRodada: criarEstado } = await import("@/domain/rodada");
   const db = await obterConexao();
   const id = await criarRodada(db, { userId: dono, questoes, modo: "pratica", limiteSegundos: null });

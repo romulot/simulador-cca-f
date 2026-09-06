@@ -11,7 +11,7 @@ describe("migrate", () => {
     pool = await poolTeste();
   });
 
-  it("cria as tabelas 'usuarios', 'rodadas' e 'questoes_rodada', sem erro", async () => {
+  it("cria as tabelas da aplicação e registra as migrations, sem erro", async () => {
     await expect(migrar(pool)).resolves.not.toThrow();
 
     const tabelas = await pool.query<{ table_name: string }>(
@@ -22,6 +22,14 @@ describe("migrate", () => {
     expect(nomes).toContain("usuarios");
     expect(nomes).toContain("rodadas");
     expect(nomes).toContain("questoes_rodada");
+    expect(nomes).toContain("password_reset_tokens");
+    expect(nomes).toContain("schema_migrations");
+
+    const versoes = await pool.query<{ version: string }>("SELECT version FROM schema_migrations ORDER BY version");
+    expect(versoes.rows.map((linha) => linha.version)).toEqual([
+      "001_initial.sql",
+      "002_password_reset_tokens.sql",
+    ]);
   });
 
   it("aplicar a migração duas vezes seguidas não falha (idempotência)", async () => {

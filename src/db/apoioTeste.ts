@@ -14,9 +14,7 @@ import { Pool } from "pg";
 import { migrar } from "./migrate";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __poolTeste: Pool | undefined;
-  // eslint-disable-next-line no-var
   var __migracaoTeste: Promise<void> | undefined;
 }
 

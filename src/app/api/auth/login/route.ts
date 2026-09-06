@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { obterConexao } from "@/db/conexao";
 import { buscarUsuarioPorEmail } from "@/db/repositorioUsuarios";
 import { verificarSenha } from "@/lib/auth/senha";
+import { excedeuLimite, identificarCliente } from "@/lib/auth/rateLimit";
 import { NOME_COOKIE_SESSAO, OPCOES_COOKIE_SESSAO, criarValorCookieSessao } from "@/lib/auth/sessao";
 
 const MENSAGEM_CREDENCIAIS_INVALIDAS = "email ou senha inválidos";
@@ -17,6 +18,9 @@ function erro(status: number, mensagem: string) {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  if (excedeuLimite(`login:${identificarCliente(request)}`, 10)) {
+    return erro(429, "muitas tentativas. Aguarde alguns minutos");
+  }
   let corpo: unknown;
   try {
     corpo = await request.json();

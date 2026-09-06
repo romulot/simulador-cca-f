@@ -399,6 +399,25 @@ a {
   cursor: not-allowed;
 }
 
+.campo-senha { position: relative; }
+.campo-senha .campo { padding-right: 6.2rem; }
+.campo-senha-controle {
+  position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%);
+  border: 0; background: transparent; color: var(--acento); font: 600 0.78rem var(--fonte-mono);
+  padding: 0.45rem 0.55rem; cursor: pointer;
+}
+.campo-senha-controle:disabled { opacity: 0.45; cursor: not-allowed; }
+.rotulo-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.rotulo-linha .rotulo { margin-bottom: 0.35em; }
+.link-secundario { font: 0.78rem var(--fonte-mono); }
+.mensagem { margin: 0; padding: 0.7rem 0.8rem; border-left: 3px solid; background: var(--painel-fraco); font-size: 0.85rem; }
+.mensagem-erro { color: var(--erro); border-color: var(--erro); }
+.mensagem-sucesso { color: var(--acerto); border-color: var(--acerto); }
+.requisito-senha { margin: 0.35rem 0 0; color: var(--fraco); font: 0.78rem var(--fonte-mono); }
+.requisito-atendido { color: var(--acerto); }
+.envelope-auth { max-width: 560px; }
+.sobretitulo { margin: 0 0 0.35rem; color: var(--acento); font: 600 0.75rem var(--fonte-mono); letter-spacing: 0.08em; text-transform: uppercase; }
+
 /* -- utilitários ----------------------------------------------------------- */
 
 .pilha {

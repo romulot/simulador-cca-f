@@ -39,6 +39,8 @@ describe("proxy", () => {
   it("/login e /cadastro ficam públicas mesmo sem sessão", () => {
     expect(proxy(requisicao("http://localhost/login")).headers.get("x-middleware-next")).toBe("1");
     expect(proxy(requisicao("http://localhost/cadastro")).headers.get("x-middleware-next")).toBe("1");
+    expect(proxy(requisicao("http://localhost/esqueci-senha")).headers.get("x-middleware-next")).toBe("1");
+    expect(proxy(requisicao("http://localhost/redefinir-senha?token=x")).headers.get("x-middleware-next")).toBe("1");
   });
 
   it("/api/catalogo e /api/auth/* ficam públicas mesmo sem sessão", () => {

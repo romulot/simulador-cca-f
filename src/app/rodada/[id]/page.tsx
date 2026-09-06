@@ -62,7 +62,7 @@ export default function TelaRodada() {
   const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [confirmandoFim, setConfirmandoFim] = useState(false);
-  const mostradaEm = useRef<number>(Date.now());
+  const mostradaEm = useRef<number>(0);
   const finalizandoPorTempo = useRef(false);
   const confirmacaoRef = useRef<HTMLDivElement>(null);
   const botaoFinalizarRef = useRef<HTMLButtonElement>(null);

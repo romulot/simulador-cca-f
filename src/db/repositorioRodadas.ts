@@ -1,6 +1,6 @@
 /** Persistência de uma rodada (prática ou prova) em Postgres.
  *
- * Duas responsabilidades, refletindo o schema (`schema.sql`):
+ * Duas responsabilidades, refletindo o schema (`migrations/001_initial.sql`):
  * `criarRodada` grava o snapshot AUTO-CONTIDO inicial (cada questão com seu
  * texto completo, não só um ID) e `carregarRodada`/`salvarRodada`
  * reconstroem e persistem o `RodadaEstado` de `src/domain/rodada.ts` entre

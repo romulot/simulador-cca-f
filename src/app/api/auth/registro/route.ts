@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { obterConexao } from "@/db/conexao";
 import { criarUsuario, EmailJaCadastradoError } from "@/db/repositorioUsuarios";
 import { hashSenha } from "@/lib/auth/senha";
+import { excedeuLimite, identificarCliente } from "@/lib/auth/rateLimit";
 import { NOME_COOKIE_SESSAO, OPCOES_COOKIE_SESSAO, criarValorCookieSessao } from "@/lib/auth/sessao";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,6 +16,9 @@ function erro(status: number, mensagem: string) {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  if (excedeuLimite(`registro:${identificarCliente(request)}`, 5)) {
+    return erro(429, "muitas tentativas. Aguarde alguns minutos");
+  }
   let corpo: unknown;
   try {
     corpo = await request.json();

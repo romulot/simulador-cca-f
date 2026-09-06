@@ -5,6 +5,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import CampoSenha from "@/components/CampoSenha";
 
 const SENHA_MINIMA = 8;
 
@@ -77,36 +78,21 @@ export default function CadastroPage() {
             <label className="rotulo" htmlFor="senha">
               Senha
             </label>
-            <input
-              id="senha"
-              type="password"
-              className="campo"
-              autoComplete="new-password"
-              minLength={SENHA_MINIMA}
-              required
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-            />
+            <CampoSenha id="senha" autoComplete="new-password" minLength={SENHA_MINIMA} value={senha} onChange={setSenha} disabled={enviando} />
+            <p className={`requisito-senha ${senha.length >= SENHA_MINIMA ? "requisito-atendido" : ""}`}>
+              {senha.length >= SENHA_MINIMA ? "✓" : "○"} Pelo menos {SENHA_MINIMA} caracteres
+            </p>
           </div>
 
           <div>
             <label className="rotulo" htmlFor="confirmar-senha">
               Confirmar senha
             </label>
-            <input
-              id="confirmar-senha"
-              type="password"
-              className="campo"
-              autoComplete="new-password"
-              minLength={SENHA_MINIMA}
-              required
-              value={confirmarSenha}
-              onChange={(e) => setConfirmarSenha(e.target.value)}
-            />
+            <CampoSenha id="confirmar-senha" autoComplete="new-password" minLength={SENHA_MINIMA} value={confirmarSenha} onChange={setConfirmarSenha} disabled={enviando} />
           </div>
 
           {erro && (
-            <p className="texto-pequeno" style={{ color: "var(--erro)" }} role="alert">
+            <p className="mensagem mensagem-erro" role="alert">
               {erro}
             </p>
           )}

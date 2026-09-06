@@ -4,9 +4,10 @@
  * `.botao-primario` e o padrão de erro `role="alert"` já usado no menu e na
  * seleção. `useSearchParams` (para o parâmetro `proximo`, gravado pelo
  * proxy ao redirecionar) exige um limite de Suspense em build de produção. */
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import CampoSenha from "@/components/CampoSenha";
 
 function destinoSeguro(proximo: string | null): string {
   // Só aceita caminho relativo iniciado por "/" — nunca uma URL absoluta,
@@ -22,6 +23,7 @@ function FormularioLogin() {
   const [senha, setSenha] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const erroRef = useRef<HTMLParagraphElement>(null);
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -35,15 +37,17 @@ function FormularioLogin() {
       });
       const corpo = await resposta.json();
       if (!resposta.ok) {
-        setErro(corpo.erro ?? "não foi possível entrar");
+        setErro(corpo.erro ?? "Não foi possível entrar.");
         setEnviando(false);
+        requestAnimationFrame(() => erroRef.current?.focus());
         return;
       }
       router.push(destinoSeguro(searchParams.get("proximo")));
       router.refresh();
     } catch {
-      setErro("falha de rede ao entrar");
+      setErro("Falha de rede ao entrar. Verifique sua conexão e tente novamente.");
       setEnviando(false);
+      requestAnimationFrame(() => erroRef.current?.focus());
     }
   }
 
@@ -66,28 +70,22 @@ function FormularioLogin() {
               className="campo"
               autoComplete="email"
               required
+              disabled={enviando}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="rotulo" htmlFor="senha">
-              Senha
-            </label>
-            <input
-              id="senha"
-              type="password"
-              className="campo"
-              autoComplete="current-password"
-              required
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-            />
+            <div className="rotulo-linha">
+              <label className="rotulo" htmlFor="senha">Senha</label>
+              <Link className="link-secundario" href="/esqueci-senha">Esqueci minha senha</Link>
+            </div>
+            <CampoSenha id="senha" autoComplete="current-password" value={senha} onChange={setSenha} disabled={enviando} />
           </div>
 
           {erro && (
-            <p className="texto-pequeno" style={{ color: "var(--erro)" }} role="alert">
+            <p ref={erroRef} className="mensagem mensagem-erro" role="alert" tabIndex={-1}>
               {erro}
             </p>
           )}
@@ -98,7 +96,7 @@ function FormularioLogin() {
         </form>
 
         <p className="texto-pequeno texto-fraco">
-          Ainda não tem conta? <Link href="/cadastro">Cadastre-se</Link>
+          Ainda não possui conta? <Link href="/cadastro">Criar conta</Link>
         </p>
       </div>
     </main>

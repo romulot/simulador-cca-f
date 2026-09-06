@@ -13,7 +13,7 @@ import type { NextRequest } from "next/server";
 
 import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
 
-const PAGINAS_PUBLICAS = new Set(["/login", "/cadastro"]);
+const PAGINAS_PUBLICAS = new Set(["/login", "/cadastro", "/esqueci-senha", "/redefinir-senha"]);
 const PREFIXOS_API_PUBLICOS = ["/api/auth/", "/api/catalogo"];
 
 function ehPublico(pathname: string): boolean {
