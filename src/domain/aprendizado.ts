@@ -1,6 +1,7 @@
-/** Regras de aprendizado adaptativo (Fases 7-10 do plano de apoio ao
- * aprendizado): estatística por tópico, critério de "ponto fraco", seleção
- * de questões para praticar um tópico e detecção de questões em revisão.
+/** Regras de aprendizado adaptativo (Fases 7-11 e 13 do plano de apoio ao
+ * aprendizado): estatística por tópico, critério de "ponto fraco"/"ponto
+ * forte", seleção de questões para praticar um tópico, detecção de
+ * questões em revisão e de dificuldade recorrente.
  *
  * Tudo aqui é função pura sobre `RespostaBruta[]` — os FATOS brutos de
  * cada resposta já dada (nunca um percentual persistido; ver §10.2 do
@@ -118,6 +119,64 @@ export function pontosFracos(
   return estatisticas
     .filter((e) => e.totalRespondido >= criterio.minimoRespondido && e.percentual < criterio.limiarAtencao)
     .sort((a, b) => a.percentual - b.percentual);
+}
+
+export interface CriterioPontoForte {
+  minimoRespondido: number;
+  /** A partir desse percentual (0-100), o tópico conta como "ponto forte". */
+  limiarForte: number;
+}
+
+export const CRITERIO_PONTO_FORTE_PADRAO: CriterioPontoForte = {
+  minimoRespondido: 3,
+  limiarForte: 90,
+};
+
+/** Tópicos "fortes": o inverso de `pontosFracos` — respondidos o
+ * suficiente para ter sinal e no percentual ou acima dele. Ordenado do
+ * melhor percentual para o pior. */
+export function pontosFortes(
+  estatisticas: EstatisticaTopico[],
+  criterio: CriterioPontoForte = CRITERIO_PONTO_FORTE_PADRAO,
+): EstatisticaTopico[] {
+  return estatisticas
+    .filter((e) => e.totalRespondido >= criterio.minimoRespondido && e.percentual >= criterio.limiarForte)
+    .sort((a, b) => b.percentual - a.percentual);
+}
+
+/** Percentual de acerto sobre TODAS as respostas do usuário, sem agrupar
+ * por tópico ou domínio — a manchete "Desempenho geral" do dashboard
+ * (Fase 13). `null` sem nenhuma resposta ainda. */
+export function desempenhoGeral(respostas: RespostaBruta[]): number | null {
+  if (respostas.length === 0) return null;
+  const acertos = respostas.filter((r) => r.resposta === r.correta).length;
+  return (acertos / respostas.length) * 100;
+}
+
+export type SeveridadeErroRecorrente = "recorrente" | "alta";
+
+export interface ErroRecorrente {
+  topicoId: string;
+  erros: number;
+  severidade: SeveridadeErroRecorrente;
+}
+
+/** Limiares de erros ABSOLUTOS num mesmo tópico (§14.1) — diferente de
+ * `pontosFracos`, que é por PERCENTUAL: um tópico muito praticado pode
+ * acumular vários erros e ainda ter percentual alto, mas continua sendo
+ * uma dificuldade recorrente que vale reforçar o material. Não deduplica
+ * por questão, mesmo espírito de `estatisticasPorTopico`. Um erro isolado
+ * já é coberto por "Revisar meus erros" (Fase 10); aqui só entra quem
+ * bateu no limiar de recorrência. */
+export function errosRecorrentes(estatisticas: EstatisticaTopico[]): ErroRecorrente[] {
+  return estatisticas
+    .filter((e) => e.erros >= 3)
+    .map((e) => ({
+      topicoId: e.topicoId,
+      erros: e.erros,
+      severidade: (e.erros >= 5 ? "alta" : "recorrente") as SeveridadeErroRecorrente,
+    }))
+    .sort((a, b) => b.erros - a.erros);
 }
 
 /** Chave estável para casar uma `Questao` do corpus com um fato de

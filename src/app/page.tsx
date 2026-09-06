@@ -17,6 +17,12 @@ interface TotaisCatalogo {
   questoes: number;
 }
 
+interface TopicoForte {
+  topicoId: string;
+  nome: string;
+  percentual: number;
+}
+
 interface EntradaHistoricoResumo {
   id: number;
   quando: string | null;
@@ -43,6 +49,9 @@ export default function Menu() {
   const [emRevisao, setEmRevisao] = useState(0);
   const [iniciandoRevisao, setIniciandoRevisao] = useState(false);
   const [erroRevisao, setErroRevisao] = useState<string | null>(null);
+  const [desempenhoGeral, setDesempenhoGeral] = useState<number | null>(null);
+  const [pontosFortes, setPontosFortes] = useState<TopicoForte[]>([]);
+  const [totalPontosAtencao, setTotalPontosAtencao] = useState(0);
 
   useEffect(() => {
     fetch("/api/catalogo")
@@ -59,7 +68,16 @@ export default function Menu() {
 
     fetch("/api/aprendizado/resumo")
       .then((r) => r.json())
-      .then((corpo) => setEmRevisao(corpo.emRevisao ?? 0));
+      .then((corpo) => {
+        setEmRevisao(corpo.emRevisao ?? 0);
+        setDesempenhoGeral(corpo.desempenhoGeral ?? null);
+        setPontosFortes(corpo.pontosFortes ?? []);
+        const totalAtencao = (corpo.dominios ?? []).reduce(
+          (soma: number, d: { topicosFracos: unknown[] }) => soma + d.topicosFracos.length,
+          0,
+        );
+        setTotalPontosAtencao(totalAtencao);
+      });
   }, []);
 
   async function iniciarRevisao() {
@@ -190,6 +208,32 @@ export default function Menu() {
             Meus pontos fracos
           </Link>
         </div>
+
+        {desempenhoGeral !== null && (
+          <section className="painel pilha" aria-labelledby="desempenho-titulo">
+            <div className="painel-titulo">
+              <h2 id="desempenho-titulo">Meu desempenho</h2>
+              <span className="mono">{formatarPercentual(desempenhoGeral)}</span>
+            </div>
+            <div className="linha" style={{ flexWrap: "wrap" }}>
+              {pontosFortes.slice(0, 3).map((t) => (
+                <span key={t.topicoId} className="badge badge-acerto">
+                  ✓ {t.nome}
+                </span>
+              ))}
+              {totalPontosAtencao > 0 && (
+                <span className="badge badge-erro">
+                  ⚠ {totalPontosAtencao} ponto(s) de atenção
+                </span>
+              )}
+            </div>
+            {totalPontosAtencao > 0 && (
+              <Link href="/desempenho" className="botao botao-fantasma">
+                Ver pontos fracos →
+              </Link>
+            )}
+          </section>
+        )}
 
         {emRevisao > 0 && (
           <section className="painel pilha" aria-labelledby="revisao-titulo">

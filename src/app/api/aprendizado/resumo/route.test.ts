@@ -70,7 +70,13 @@ describe("GET /api/aprendizado/resumo", () => {
     const resposta = await GET(get("http://localhost"));
     expect(resposta.status).toBe(200);
     const corpo = await resposta.json();
-    expect(corpo).toEqual({ dominios: [], emRevisao: 0 });
+    expect(corpo).toEqual({
+      dominios: [],
+      emRevisao: 0,
+      desempenhoGeral: null,
+      pontosFortes: [],
+      errosRecorrentes: [],
+    });
   });
 
   it("marca um tópico como fraco só com respostas suficientes e abaixo do limiar", async () => {
@@ -128,6 +134,52 @@ describe("GET /api/aprendizado/resumo", () => {
     );
     const { GET } = await import("./route");
     const corpo = await (await GET(get("http://localhost"))).json();
-    expect(corpo).toEqual({ dominios: [], emRevisao: 0 });
+    expect(corpo).toEqual({
+      dominios: [],
+      emRevisao: 0,
+      desempenhoGeral: null,
+      pontosFortes: [],
+      errosRecorrentes: [],
+    });
+  });
+
+  it("calcula desempenho geral sobre todas as respostas", async () => {
+    await rodadaFinalizada(
+      [questaoFake("a", 1, "A", ["Hooks"]), questaoFake("a", 2, "A", ["Hooks"])],
+      ["A", "B"],
+    );
+    const { GET } = await import("./route");
+    const corpo = await (await GET(get("http://localhost"))).json();
+    expect(corpo.desempenhoGeral).toBeCloseTo(50);
+  });
+
+  it("marca ponto forte com respostas suficientes e percentual alto", async () => {
+    await rodadaFinalizada(
+      [
+        questaoFake("a", 1, "A", ["Hooks"]),
+        questaoFake("a", 2, "A", ["Hooks"]),
+        questaoFake("a", 3, "A", ["Hooks"]),
+      ],
+      ["A", "A", "A"],
+    );
+    const { GET } = await import("./route");
+    const corpo = await (await GET(get("http://localhost"))).json();
+    expect(corpo.pontosFortes).toEqual([{ topicoId: "hooks", nome: "Hooks", percentual: 100 }]);
+  });
+
+  it("marca dificuldade recorrente a partir de 3 erros no mesmo tópico", async () => {
+    await rodadaFinalizada(
+      [
+        questaoFake("a", 1, "A", ["Hooks"]),
+        questaoFake("a", 2, "A", ["Hooks"]),
+        questaoFake("a", 3, "A", ["Hooks"]),
+      ],
+      ["B", "B", "B"],
+    );
+    const { GET } = await import("./route");
+    const corpo = await (await GET(get("http://localhost"))).json();
+    expect(corpo.errosRecorrentes).toEqual([
+      { topicoId: "hooks", nome: "Hooks", dominio: 1, erros: 3, severidade: "recorrente" },
+    ]);
   });
 });

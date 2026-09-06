@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { Questao } from "@/lib/parser/tipos";
 import {
   CRITERIO_PONTO_FRACO_PADRAO,
+  CRITERIO_PONTO_FORTE_PADRAO,
+  desempenhoGeral,
   desempenhoPorDominio,
+  errosRecorrentes,
   estatisticasPorTopico,
+  pontosFortes,
   pontosFracos,
   questoesEmRevisao,
   selecionarParaPraticar,
@@ -105,6 +109,59 @@ describe("pontosFracos", () => {
     ];
     const fracos = pontosFracos(estatisticas, CRITERIO_PONTO_FRACO_PADRAO);
     expect(fracos.map((f) => f.topicoId)).toEqual(["baixo", "medio"]);
+  });
+});
+
+describe("pontosFortes", () => {
+  it("exige o mínimo de respostas antes de marcar como forte", () => {
+    const estatisticas = [
+      { topicoId: "a", acertos: 1, erros: 0, totalRespondido: 1, percentual: 100 },
+      { topicoId: "b", acertos: 3, erros: 0, totalRespondido: 3, percentual: 100 },
+    ];
+    expect(pontosFortes(estatisticas).map((f) => f.topicoId)).toEqual(["b"]);
+  });
+
+  it("respeita o limiar e ordena do melhor pro pior", () => {
+    const estatisticas = [
+      { topicoId: "medio", acertos: 8, erros: 2, totalRespondido: 10, percentual: 80 },
+      { topicoId: "otimo", acertos: 10, erros: 0, totalRespondido: 10, percentual: 100 },
+      { topicoId: "bom", acertos: 9, erros: 1, totalRespondido: 10, percentual: 90 },
+    ];
+    const fortes = pontosFortes(estatisticas, CRITERIO_PONTO_FORTE_PADRAO);
+    expect(fortes.map((f) => f.topicoId)).toEqual(["otimo", "bom"]);
+  });
+});
+
+describe("desempenhoGeral", () => {
+  it("devolve null sem nenhuma resposta", () => {
+    expect(desempenhoGeral([])).toBeNull();
+  });
+
+  it("calcula o percentual sobre todas as respostas, ignorando tópico/domínio", () => {
+    const respostas = [
+      resposta({ origem: "a", numero: 1, dominio: 1, topicos: ["Hooks"], resposta: "A", correta: "A" }),
+      resposta({ origem: "b", numero: 1, dominio: 2, topicos: ["Outro"], resposta: "B", correta: "A" }),
+      resposta({ origem: "c", numero: 1, dominio: null, topicos: [], resposta: "A", correta: "A" }),
+    ];
+    expect(desempenhoGeral(respostas)).toBeCloseTo((2 / 3) * 100);
+  });
+});
+
+describe("errosRecorrentes", () => {
+  it("ignora tópico com menos de 3 erros", () => {
+    const estatisticas = [{ topicoId: "a", acertos: 0, erros: 2, totalRespondido: 2, percentual: 0 }];
+    expect(errosRecorrentes(estatisticas)).toEqual([]);
+  });
+
+  it("marca 'recorrente' a partir de 3 erros e 'alta' a partir de 5, ordenado do pior", () => {
+    const estatisticas = [
+      { topicoId: "tres", acertos: 0, erros: 3, totalRespondido: 3, percentual: 0 },
+      { topicoId: "cinco", acertos: 0, erros: 5, totalRespondido: 5, percentual: 0 },
+    ];
+    expect(errosRecorrentes(estatisticas)).toEqual([
+      { topicoId: "cinco", erros: 5, severidade: "alta" },
+      { topicoId: "tres", erros: 3, severidade: "recorrente" },
+    ]);
   });
 });
 
