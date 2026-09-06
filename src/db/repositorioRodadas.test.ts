@@ -23,6 +23,7 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A", domin
       cenario: "cenário",
       principioTestado: "princípio",
     },
+    topicos: ["Teste"],
   };
 }
 

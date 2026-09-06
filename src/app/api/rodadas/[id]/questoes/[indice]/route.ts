@@ -9,8 +9,13 @@
  * questão atual do servidor (rejeita com 409 se não for — evita que uma
  * requisição atrasada aja sobre uma posição que o servidor já deixou para
  * trás). Duas ações possíveis no corpo:
- *   - `{ resposta: "A", segundosGastos }` — grava a resposta e avança
- *     (equivalente a `responder()` do domínio).
+ *   - `{ resposta: "A", segundosGastos }` — grava a resposta. No modo
+ *     prova, avança na hora (equivalente a `responder()` do domínio; nunca
+ *     revela a resposta certa). No modo prática, NÃO avança — fica na
+ *     mesma questão e a resposta inclui `feedback` (resposta certa +
+ *     explicação de cada alternativa), para o candidato ver antes de
+ *     continuar. O candidato então chama de novo com `destino` para seguir
+ *     em frente (ver `5.3`/`5.4` do plano de aprendizado).
  *   - `{ destino: 3, segundosGastos }` — navega para `destino`, sem
  *     gravar resposta (equivalente a `irPara()`).
  *
@@ -30,8 +35,16 @@ import { NextResponse } from "next/server";
 import { obterConexao } from "@/db/conexao";
 import { carregarRodada, salvarRodada } from "@/db/repositorioRodadas";
 import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
-import { encerrada, irPara, relogioPadrao, responder, type RodadaEstado } from "@/domain/rodada";
+import {
+  encerrada,
+  irPara,
+  relogioPadrao,
+  responder,
+  responderSemAvancar,
+  type RodadaEstado,
+} from "@/domain/rodada";
 import { paraQuestaoCliente } from "@/lib/api/questaoCliente";
+import { paraFeedbackResposta, type FeedbackResposta } from "@/lib/api/feedbackResposta";
 import type { Letra } from "@/lib/parser/tipos";
 import type { Pool } from "pg";
 
@@ -149,11 +162,22 @@ export async function POST(request: Request, { params }: ParamsRota): Promise<Re
   tempos[indice] += corpo.segundosGastos;
   let estado: RodadaEstado = { ...estadoCarregado, tempos };
 
+  let feedback: FeedbackResposta | undefined;
+
   if (corpo.resposta !== undefined) {
     if (!LETRAS_VALIDAS.has(corpo.resposta)) {
       return erro(400, "'resposta' deve ser 'A', 'B', 'C' ou 'D'");
     }
-    estado = responder(estado, corpo.resposta, relogio);
+    if (estado.modo === "pratica") {
+      // Feedback vem da questão ANTES de responder (a que está saindo de
+      // cena permanece a mesma, já que não avançamos) — não faz diferença
+      // de conteúdo, mas mantém a leitura de "a questão que acabou de ser
+      // respondida", não a próxima.
+      feedback = paraFeedbackResposta(estado.questoes[estado.indice]);
+      estado = responderSemAvancar(estado, corpo.resposta, relogio);
+    } else {
+      estado = responder(estado, corpo.resposta, relogio);
+    }
   } else if (corpo.destino !== undefined) {
     if (
       !Number.isInteger(corpo.destino) ||
@@ -173,5 +197,6 @@ export async function POST(request: Request, { params }: ParamsRota): Promise<Re
     indiceAtual: estado.indice,
     respostas: estado.respostas,
     questaoAtual: paraQuestaoCliente(estado.questoes[estado.indice], estado.indice),
+    ...(feedback ? { feedback } : {}),
   });
 }

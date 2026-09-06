@@ -13,6 +13,8 @@ Explicações em PT-BR. O sufixo `· (x.y)` indica o task statement; itens cruza
 - **C — correta.**
 - **D — errada:** `@import` é expandido junto com a camada que o contém, no momento em que ela carrega; "on-demand" é o CLAUDE.md de **subdiretório**, não o import (camada/alvo errado).
 
+**Tópicos:** Hierarquia CLAUDE.md
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -28,6 +30,8 @@ Skill é **model-invocable por padrão** (Claude decide pela `description`); `di
 - **B — errada:** joga uma checklist longa no contexto de **toda** sessão para resolver um problema de invocação; perde a carga on-demand que justifica a skill (resposta desproporcional / camada errada).
 - **C — errada:** `argument-hint` é **hint de autocomplete**, não pré-condição de invocação — atribui a um campo de UX um poder que ele não tem (equívoco de capacidade).
 - **D — errada:** `allowed-tools` escopa as tools **durante** a execução; ele não decide se a skill é acionada. A skill funciona quando invocada, o que já descarta essa hipótese (camada/alvo errado).
+
+**Tópicos:** Commands e Skills
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -45,6 +49,8 @@ Uma **path-rule injeta texto de instrução** quando o glob casa; uma **skill co
 - **C — errada:** tornar a rule global põe as 4 fases no contexto de toda sessão, inclusive as que não tocam Terraform — custo de contexto sem resolver o problema relatado.
 - **D — correta.**
 
+**Tópicos:** Path Rules
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -60,6 +66,8 @@ Aprovar o plano **sai** do plan mode: a sessão passa ao modo descrito pela opç
 - **B — correta.**
 - **C — errada:** ausência de `permissions` não promove a sessão a `bypassPermissions`; o modo veio da opção de aprovação escolhida (feature/comportamento inexistente).
 - **D — errada:** não há "re-aprovar o plano original" — a aprovação **encerrou** o plan mode; não é um estado que volta por mudança de assunto (camada/alvo errado).
+
+**Tópicos:** Plan Mode
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -77,6 +85,8 @@ A busca de `session_id` é **escopada ao diretório do projeto**. Rodando as rod
 - **C — correta.**
 - **D — errada:** resumir a falha em prosa joga fora entrada, valor obtido e valor esperado — é o erro central da iteração test-driven, e não tem relação com o resume falhando.
 
+**Tópicos:** Refinamento Iterativo
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Difícil
@@ -92,6 +102,8 @@ A busca de `session_id` é **escopada ao diretório do projeto**. Rodando as rod
 - **B — errada:** o SDK valida em draft-07 e **rejeita** schema que declare draft mais novo; a premissa da alternativa falha na plataforma (equívoco de capacidade / feature inexistente).
 - **C — errada:** prompt e exemplos reduzem a incidência, mas o requisito é que nada fora de forma passe — probabilístico onde precisa ser determinístico (contraste 1.4/1.5).
 - **D — errada:** retry até "todas as datas parsearem" gasta chamadas e mascara o defeito de validação; é retry cego sobre erro que não é transitório (voto/retry que suprime sinal).
+
+**Tópicos:** CI/CD
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
@@ -109,6 +121,8 @@ A decisão vem dos **sinais observáveis**, não da contagem de arquivos: a caus
 - **C — errada:** quatro sessões para uma edição mecânica idêntica multiplica overhead e perde a visão do conjunto; granularidade sem benefício (resposta desproporcional).
 - **D — correta.**
 
+**Tópicos:** Plan Mode
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -125,6 +139,8 @@ Antes de mover ou reescrever qualquer coisa, é preciso saber **de onde** a inst
 - **C — errada:** consolidar tudo num CLAUDE.md monolítico é a resposta oposta à modularização por `@import`/`.claude/rules/`, infla contexto e ainda pode não conter a convenção que ninguém localizou.
 - **D — errada:** hook `PreToolUse` é a resposta certa quando o requisito é **impedir** um commit fora do padrão; aqui o pedido é fazer a convenção valer para todos e o primeiro passo é diagnóstico — enforcement antes do diagnóstico é resposta desproporcional.
 
+**Tópicos:** Hierarquia CLAUDE.md
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -140,6 +156,8 @@ Antes de mover ou reescrever qualquer coisa, é preciso saber **de onde** a inst
 - **B — errada:** `~/.claude/rules/` é escopo **pessoal** — cada engenheiro pode editar ou apagar o arquivo na própria máquina; move na direção oposta da garantia.
 - **C — errada:** CODEOWNERS e texto em template de PR são controles **sociais/de processo**; não impedem uma edição local nem garantem presença no contexto (probabilístico onde precisa ser determinístico).
 - **D — errada:** `scope: managed` em rule não existe — é feature verossímil por analogia com o managed do CLAUDE.md, e endossar a proposta é o erro que o item cobra.
+
+**Tópicos:** Path Rules, Hierarquia CLAUDE.md
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -158,6 +176,8 @@ O que se quer é **ramificar a conversa inteira** a partir de um estado caro de 
 - **C — correta.**
 - **D — errada:** Explore é subagente **read-only** especializado em descoberta (Write/Edit negados) — não implementa refactor nenhum (camada/alvo errado).
 
+**Tópicos:** Commands e Skills, Resume e Fork de Sessão
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -175,6 +195,8 @@ O requisito é de **incapacidade**, não de improbabilidade. `--allowedTools` **
 - **C — errada:** `--max-turns` limita turnos e **sai com erro** ao estourar; nada nele impede uma escrita dentro do 1º turno — camada errada, e ainda introduz um desfecho de falha para o gate tratar.
 - **D — correta.**
 
+**Tópicos:** Plan Mode, CI/CD
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -191,6 +213,8 @@ São **dois mecanismos de resolução diferentes**, e o cenário mostra os dois 
 - **B — correta.**
 - **C — errada:** a escolha entre duas skills de **mesmo nome** não é feita por qualidade de `description`; só uma existe depois da resolução de escopo (camada/alvo errado).
 - **D — errada:** on-demand × sempre-carregado é o eixo de CLAUDE.md de subdiretório e path-rule, não a explicação do shadowing; e `paths` não muda precedência de escopo (camada/alvo errado).
+
+**Tópicos:** Hierarquia CLAUDE.md, Commands e Skills
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar

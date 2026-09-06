@@ -13,6 +13,8 @@ A correta ataca a causa raiz: "comentário enganoso" é um adjetivo, não uma co
 - **C — errada:** over-engineering — treinar um classificador sobre os 41 casos rotulados adiciona uma camada de ML quando o defeito está no critério de prompt, que um ajuste de texto já resolve.
 - **D — errada:** três passes com o mesmo critério vago concordam no mesmo erro; voto/consenso suprime sinal em vez de consertar a causa.
 
+**Tópicos:** Critérios Explícitos
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -28,6 +30,8 @@ O valor já sai certo em 36/36 — o conteúdo não é o problema. O que varia �
 - **B — errada:** normalizar com regex depois da extração esconde o sintoma na camada errada (pós-processamento) e não cobre o caso que o regex não previu; o requisito é de forma, que exemplo fixa na origem.
 - **C — correta.**
 - **D — errada:** `temperature` não é a causa de inconsistência de forma — é rejeitado com erro 400 nesta família de modelo, e a variação de forma não é ruído de amostragem, é ausência de exemplo.
+
+**Tópicos:** Few-Shot
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
@@ -45,6 +49,8 @@ O campo está em `required` num schema `strict`, e esse regime não permite omis
 - **C — errada:** `minLength`/`pattern` saem do schema enviado à API sem aviso e viram checagem local pós-geração — não impedem a geração do valor inventado, só o rejeitariam depois, e ainda não criam o `null` que falta.
 - **D — errada:** uma tool de validação forçada sequencia a chamada, não desambigua nem resolve a ausência de dado; e a relação "este campo é válido dado aquele outro" não é o problema aqui — o problema é presença obrigatória sem saída para ausência real.
 
+**Tópicos:** Tool Use Schema
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Difícil
@@ -60,6 +66,8 @@ Retorno decrescente medido: 3 resolvidos na segunda tentativa, 0 na terceira. Qu
 - **B — errada:** afrouxar o validador esconde o problema em vez de escalá-lo — o campo passa a validar sem que o dado exista.
 - **C — errada:** a taxa global de 50% esconde o limite do retry; a leitura correta é por classe/documento, não pela média do lote.
 - **D — correta.**
+
+**Tópicos:** Validação e Retry
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -77,6 +85,8 @@ O sinal de roteamento entre síncrono e lote é "alguém fica bloqueado esperand
 - **C — errada:** encurtar a janela do lote por configuração é feature inexistente — a janela de até 24h é propriedade da API, não parâmetro ajustável por chamada.
 - **D — errada:** a ordem de retorno não é o problema do lote — `custom_id` resolve isso; o motivo real de manter a revisão síncrona é o bloqueio do merge, não a ordenação.
 
+**Tópicos:** Batch Processing
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Médio
@@ -92,6 +102,8 @@ Nove sprints sem uma única rejeição, com seis defeitos da mesma classe chegan
 - **B — errada:** o guia nomeia extended thinking, junto com a auto-instrução, como inferior à revisão por instância independente; mais esforço de raciocínio sobre as próprias conclusões não cria a distância que falta.
 - **C — errada:** equívoco de capacidade — nada no enunciado indica truncamento por janela; o problema é a mesma instância revisando o que ela mesma escreveu, não o tamanho do histórico.
 - **D — correta.**
+
+**Tópicos:** Revisão Multi-Instância
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
@@ -109,6 +121,8 @@ Nove sprints sem uma única rejeição, com seis defeitos da mesma classe chegan
 - **C — errada:** ordenar o array `tools` para induzir a escolha do modelo é feature inexistente — a ordem do array não influencia a decisão de `tool_choice: "auto"`.
 - **D — errada:** classificar o tipo com uma chamada prévia e então forçar a tool certa é over-engineering — `tool_choice: "any"` já resolve a mesma ambiguidade sem uma chamada extra.
 
+**Tópicos:** Tool Use Schema
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Difícil
@@ -124,6 +138,8 @@ Continuar a sessão do gerador com `--resume` mantém no histórico o próprio r
 - **B — correta.**
 - **C — errada:** camada errada, sem apoio no sintoma: uma perda de permissão de ferramenta produziria falha abrupta e localizável (o passo simplesmente não roda), não um revisor que passa a concordar com uma decisão que antes questionava.
 - **D — errada:** `fork_session` é feature real, mas resolve isolamento de ESTADO (não mutar a sessão original) — não resolve herança de reasoning, que é o que faz o revisor parar de questionar a decisão.
+
+**Tópicos:** Revisão Multi-Instância, Resume e Fork de Sessão
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -142,6 +158,8 @@ As duas classes vivem em camadas diferentes do mesmo domínio. O erro aritmétic
 - **C — correta.**
 - **D — errada:** somar as duas classes numa taxa de erro única destrói a leitura por classe e esconde que um detector (o aritmético) já funciona bem, tratando-o como se tivesse o mesmo problema do outro.
 
+**Tópicos:** Validação e Retry, Critérios Explícitos
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -158,6 +176,8 @@ Ninguém espera o resultado — o sinal do 4.5 aponta para o lote. Mas dentro do
 - **B — correta.**
 - **C — errada:** camada errada — aumentar `max_tokens` tampa a saída truncada, mas não cria o pass de integração que vê os dois lados de um contrato entre arquivos; a lista de achados maior não substitui a decomposição.
 - **D — errada:** reenviar o lote inteiro por causa de uma falha isolada é desproporcional; a correção certa é reenviar só o request falho, identificado pelo `custom_id`.
+
+**Tópicos:** Batch Processing, Revisão Multi-Instância
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -176,6 +196,8 @@ A tabela de calibração já existe e já está sendo usada: 91% de acerto na fa
 - **C — errada:** suprime sinal — mesmo a faixa baixa tem 12% de acerto; parar de rotear esses achados para analista descarta esse defeito verdadeiro sem que ninguém o veja.
 - **D — errada:** é o erro clássico do 4.1 — um threshold único e determinístico substitui a fila calibrada por faixa, jogando fora justamente a informação de que as faixas têm taxas de acerto muito diferentes (91% × 12%).
 
+**Tópicos:** Revisão Multi-Instância, Critérios Explícitos, Revisão e Calibração
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -192,6 +214,8 @@ A tabela de calibração já existe e já está sendo usada: 91% de acerto na fa
 - **B — errada:** é exatamente a conflação que o item testa — tool forçada aumenta a chance de chamada, mas não garante `tool_use` em toda resposta; com o bloco ausente não há evidência de que a extração ocorreu.
 - **C — errada:** desproporcional — o `custom_id` identifica exatamente quais dos 300 requests voltaram sem `tool_use`; não há motivo para reenviar os 289 que já responderam corretamente.
 - **D — errada:** camada errada — trocar `tool_choice` de forçado para `any` ataca ambiguidade de TIPO de documento (um problema do 4.3), mas a tool já estava disponível e forçada nesses onze; eles são desfechos que precisam ser identificados e reenviados por `custom_id`, não um problema de disponibilidade de tool.
+
+**Tópicos:** Batch Processing
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar

@@ -13,6 +13,8 @@ A `description` (não o nome da função Python, não o system prompt) é o sina
 - **C — errada:** mapa palavra→tool no system prompt, mantido à mão a cada nova frase que erra, é enforcement probabilístico onde o requisito pede um conserto determinístico na declaração da tool (probabilístico onde precisa ser determinístico).
 - **D — errada:** forçar `tool_choice` para toda a fila mascara o problema de descrição e trava outras chamadas legítimas de `apply_codemod` — conserta na camada errada (camada/alvo errado).
 
+**Tópicos:** Descrições de Tools
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -28,6 +30,8 @@ Variável obrigatória sem `:-default` ausente no ambiente faz o **parse do conf
 - **B — errada:** não existe cache de config a ser limpo nesse mecanismo — feature inexistente porém verossímil.
 - **C — errada:** contraria o comportamento real (var obrigatória sem default falha o parse; não vira string vazia silenciosa) — equívoco de capacidade.
 - **D — errada:** mover para `~/.claude.json` com valor hardcoded reintroduz segredo literal versionável/sincronizável e generaliza mal a precedência de scope para justificar uma alavanca errada (camada/alvo errado).
+
+**Tópicos:** MCP Servers
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -45,6 +49,8 @@ O mesmo payload malformado é reenviado sem mudança — isso é erro de **input
 - **C — correta.**
 - **D — errada:** "não-retryable implica sempre `business`" é uma generalização errada da taxonomia — o campo renomeado não é violação de política (não mapeia a um arquétipo §4 — erro mecanístico específico: categoria não decorre de retryable/não-retryable).
 
+**Tópicos:** Erros Estruturados
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -60,6 +66,8 @@ Busca de **conteúdo** em muitos arquivos é o trabalho do Grep (ripgrep): saíd
 - **B — errada:** shell-out via Bash com `find`/`xargs` reintroduz texto cru e escapa as deny-rules determinísticas das tools dedicadas — camada/alvo errado.
 - **C — errada:** construir um serviço de indexação para uma busca pontual em 200 arquivos é over-engineering para o que o Grep já resolve diretamente.
 - **D — correta.**
+
+**Tópicos:** Built-in Tools
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
@@ -77,6 +85,8 @@ Quebra-automatismo: aqui **forçar `tool_choice`** é de fato a resposta certa �
 - **C — correta.**
 - **D — errada:** treinar um classificador para decidir se o primeiro passo é necessário é over-engineering para um requisito que `tool_choice` resolve nativamente.
 
+**Tópicos:** Tool Choice
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
 - Dificuldade: Médio
@@ -92,6 +102,8 @@ O exemplo trabalhado faz parte do sinal de seleção tanto quanto a prosa da `de
 - **B — errada:** forçar `tool_choice` garante que a tool seja chamada, mas não corrige o **formato de saída** que a tool produz — camada/alvo errado.
 - **C — errada:** um lembrete no system prompt tenta compensar por enforcement probabilístico um problema que mora na declaração da tool (probabilístico onde precisa ser determinístico).
 - **D — correta.**
+
+**Tópicos:** Descrições de Tools
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -109,6 +121,8 @@ Scope `local` é pessoal/não-versionado e vence `project` **sem merge de campos
 - **C — correta.**
 - **D — errada:** não existe expiração automática de entradas de scope local — feature inexistente porém verossímil.
 
+**Tópicos:** MCP Servers
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -125,6 +139,8 @@ Mesma tool, duas causas reais diferentes: o 503 é recuperável com retry (trans
 - **C — errada:** `validation` pressupõe input malformado do chamador; nenhum dos dois casos é isso (não mapeia a um arquétipo §4 — erro mecanístico específico: categoria não bate com a causa real).
 - **D — errada:** inferir a causa pela redação de uma mensagem genérica é confiar num proxy não confiável, exatamente o problema que os metadados estruturados existem para eliminar (proxy plausível não confiável).
 
+**Tópicos:** Erros Estruturados
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -140,6 +156,8 @@ Mesma tool, duas causas reais diferentes: o 503 é recuperável com retry (trans
 - **B — errada:** reatribuir a tool forçada turno a turno com base na frase mais recente é uma heurística frágil e cara de manter — over-engineering.
 - **C — errada:** renomear só `check_document_exists` mantendo a escolha forçada em `fetch_document` não muda nada, porque a tool renomeada continua inacessível — camada/alvo errado.
 - **D — correta.**
+
+**Tópicos:** Descrições de Tools, Tool Choice
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -158,6 +176,8 @@ A causa é uma regra de negócio do servidor (freeze de release), não um proble
 - **C — errada:** reforçar por prompt um retry cego de até 5 tentativas ignora que a causa é permanente enquanto o freeze durar — probabilístico onde precisa ser determinístico.
 - **D — errada:** classificar como `transient` um bloqueio permanente de política é equívoco de capacidade — nenhuma tentativa local vai ter sucesso enquanto o freeze estiver ativo.
 
+**Tópicos:** Erros Estruturados, MCP Servers
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -175,6 +195,8 @@ Least privilege aplica-se igualmente a built-ins e a tools MCP customizadas: Bas
 - **C — errada:** uma regra no system prompt proibindo a chamada é exatamente o que já falhou na auditoria — enforcement probabilístico (probabilístico onde precisa ser determinístico).
 - **D — errada:** empacotar o `pytest` numa tool MCP nova só para "não usar Bash" é complexidade extra sem necessidade — over-engineering.
 
+**Tópicos:** Tool Choice, Built-in Tools
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -191,6 +213,8 @@ O prefixo `mcp__<server>__` existe para roteamento/execução (de qual servidor 
 - **B — errada:** não há shadowing de scope entre dois servidores MCP distintos que devem coexistir — diagnosticar como problema de precedência aponta para o lugar errado (camada/alvo errado).
 - **C — errada:** um sufixo cosmético (`_v2`) no nome de registro não adiciona informação de fronteira; a mesma descrição vaga permanece — camada/alvo errado.
 - **D — errada:** forçar `tool_choice` com base no formato aparente do ID é uma heurística frágil que não escala para pedidos de notícia — probabilístico onde precisa ser determinístico.
+
+**Tópicos:** Descrições de Tools, MCP Servers
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar

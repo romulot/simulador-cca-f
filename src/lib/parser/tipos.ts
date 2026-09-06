@@ -40,6 +40,11 @@ export interface Questao {
   resumo: string;
   explicacoes: AlternativasPorLetra;
   metadados: MetadadosQuestao;
+  /** tags curtas de tópico, uma por task statement testado (§20 do plano de
+   * aprendizado) — separado de `metadados` porque, ao contrário desses
+   * campos, não é "não exibir ao candidato": tópicos alimentam features
+   * voltadas ao candidato (catálogo de materiais, praticar por tópico). */
+  topicos: string[];
 }
 
 /** Resultado intermediário de `parseSimulado`, por questão. */
@@ -56,4 +61,5 @@ export interface QuestaoGabarito {
   resumo: string;
   explicacoes: AlternativasPorLetra;
   metadados: MetadadosQuestao;
+  topicos: string[];
 }

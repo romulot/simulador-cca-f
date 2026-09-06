@@ -94,6 +94,8 @@ describe("descobrir — pares quebrados não derrubam a descoberta", () => {
         "- **C — errada:** errada.",
         "- **D — errada:** errada.",
         "",
+        "**Tópicos:** Teste",
+        "",
         "**Metadados (revisão; não exibir ao candidato):**",
         "- Bloom: Lembrar",
         "- Dificuldade: Fácil",

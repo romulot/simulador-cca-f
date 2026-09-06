@@ -15,6 +15,8 @@ O "quem roda o loop" é a distinção-chave: no Agent SDK, `query()` **já** exe
 - **C — errada:** propõe um hook de deduplicação por comparação de nome+argumentos — **over-engineering**: adiciona uma camada de detecção para mascarar um bug que deveria simplesmente ser removido na origem (o loop redundante).
 - **D — errada:** troca o modelo para reduzir a frequência de `tool_use` blocks — **camada/alvo errado**: ataca o modelo em vez da orquestração; não elimina o segundo loop que causa a reexecução.
 
+**Tópicos:** Loop Agêntico
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -30,6 +32,8 @@ A seleção dinâmica de subagentes feita **uma única vez, no intake**, não é
 - **B — correta.**
 - **C — errada:** subagente de billing mensageando o subagente de security diretamente, pulando o coordenador — **camada/alvo errado**: quebra o hub-and-spoke; decidir se o escopo deve crescer é decisão do coordenador, não dos pares.
 - **D — errada:** classificador de "urgência" no texto da resposta como gatilho de escalação — **proxy plausível não confiável**: tom/urgência percebida não é sinal confiável de que uma nova área de compliance/segurança foi descoberta.
+
+**Tópicos:** Coordenador e Subagentes
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -47,6 +51,8 @@ O pilar do 1.3: o **único canal pai→filho é a string do prompt**. Referencia
 - **C — correta.**
 - **D — errada:** rodar a síntese três vezes e manter só o que concorda em ≥2 execuções — **voto/consenso que suprime sinal**: concordância entre execuções não valida a existência real de uma fonte; três alucinações parecidas ainda são alucinações.
 
+**Tópicos:** Spawn de Subagentes
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -62,6 +68,8 @@ O requisito é garantia determinística independente do julgamento do modelo sob
 - **B — errada:** classificador de "trivialidade" do diff como gate — **over-engineering**: recria o mesmo julgamento subjetivo que já causou a falha, agora com uma camada de ML por cima.
 - **C — correta.**
 - **D — errada:** hook `PostToolUse` que reverte o merge depois de ele já ter ocorrido — **camada/alvo errado**: atua depois do fato; não é enforcement, é limpeza reativa — o merge indevido já aconteceu.
+
+**Tópicos:** Enforcement de Workflow
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
@@ -79,6 +87,8 @@ A causa raiz não é o mecanismo de normalização em si — é o **escopo do ma
 - **C — errada:** classificador que prediz se o texto "parece" ter timestamp — **over-engineering**: adiciona uma camada de ML para compensar um matcher mal escopado, quando bastava corrigir o próprio matcher.
 - **D — errada:** desativar o hook e pedir ao modelo que confira manualmente — **probabilístico onde precisa ser determinístico**: abandona a garantia determinística por uma checagem que depende do modelo lembrar de fazê-la.
 
+**Tópicos:** Hooks
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -94,6 +104,8 @@ A resposta certa é híbrida, e por isso mais difícil: nem manter tudo fixo, ne
 - **B — errada:** tornar o pipeline inteiro dinâmico, mesmo para os 85% que já funcionam bem — **over-engineering**: paga o custo de um planner adaptativo em todo o volume para resolver uma falha que afeta só uma fração das consultas.
 - **C — correta.**
 - **D — errada:** reaproveitar silenciosamente citações de uma consulta anterior não relacionada quando a busca por palavra-chave falha — não mapeia a um arquétipo §4 — erro mecanístico específico (mistura resultados de consultas diferentes; é um erro de dados, não um dos 7 padrões).
+
+**Tópicos:** Decomposição de Tarefas
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -111,6 +123,8 @@ Uma vez criado, um fork é uma sessão como qualquer outra: tem seu próprio id 
 - **C — errada:** afirma que os branches se fundem de volta ao original automaticamente com o tempo — **feature inexistente porém verossímil**: não existe merge automático entre fork e sessão original; os branches permanecem paralelos até ação manual.
 - **D — errada:** afirma que é preciso repetir `fork_session=True` em todo resume subsequente para "manter a segurança" — **equívoco de capacidade**: confunde o que a flag faz; `fork_session=True` só é necessário no momento de criar um novo branch, não para continuar um já existente.
 
+**Tópicos:** Resume e Fork de Sessão
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -127,6 +141,8 @@ O handoff para um humano que não vê o transcript completo deve trazer campos f
 - **C — errada:** classificador de "frustração" para priorizar mensagens — **proxy plausível não confiável**: sentimento não localiza os campos objetivos (id da transação, valor) que o especialista precisa.
 - **D — correta.**
 
+**Tópicos:** Enforcement de Workflow
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
 - Dificuldade: Fácil
@@ -142,6 +158,8 @@ Cruza o contrato do loop (1.1) com o mecanismo de spawn via `Task` (1.3): o reto
 - **B — errada:** teto de 1 spawn por tipo de subagente — **camada/alvo errado**: mascara o sintoma limitando a ferramenta, sem corrigir o elo quebrado (`tool_result` que nunca chega casado).
 - **C — errada:** regra de prompt para não spawnar o mesmo subagente duas vezes — **probabilístico onde precisa ser determinístico**: depende do modelo lembrar de uma regra textual em vez de corrigir o contrato de retorno da tool.
 - **D — errada:** janela de contexto maior — **equívoco de capacidade**: janela maior não resolve um `tool_result` que nunca foi enviado; o modelo não "esquece" algo que nunca recebeu.
+
+**Tópicos:** Loop Agêntico, Spawn de Subagentes
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -160,6 +178,8 @@ Cruza enforcement (1.4) com normalização (1.5): são dois hooks, em dois está
 - **C — errada:** pedir ao modelo, via prompt, para formatar a moeda de forma consistente — **probabilístico onde precisa ser determinístico**: mesmo padrão do 1.5 — normalização de formato pertence a um hook, não à memória do modelo.
 - **D — errada:** classificador de formato regional com escalação por confiança — **over-engineering**: uma tarefa de normalização de string ganha uma camada de ML e um caminho de escalação por confiança, quando `PostToolUse` já resolve deterministicamente.
 
+**Tópicos:** Enforcement de Workflow, Hooks
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -177,6 +197,8 @@ Cruza decomposição (1.6) com o papel do coordenador (1.2), mas por um mecanism
 - **C — errada:** o coordenador inspeciona os relatórios por fonte após o fan-out por detalhes de segmento "faltando" e spawna subagentes extras para preencher a lacuna — não mapeia a um arquétipo §4 — erro mecanístico específico: é exatamente o mecanismo correto da Q2 (descoberta de escopo em campo → redelegação), aplicado aqui a um problema que não é de escopo faltante — o eixo em si está errado desde o desenho, e mais subagentes no mesmo eixo por fonte continuam não produzindo uma comparação por segmento.
 - **D — correta.**
 
+**Tópicos:** Coordenador e Subagentes, Decomposição de Tarefas
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -193,6 +215,8 @@ Cruza fork de sessão (1.7) com spawn/contexto isolado de subagentes (1.3). O is
 - **B — correta.**
 - **C — errada:** `share_context=True` para os subagentes acessarem a baseline direto, sem forkar — **feature inexistente porém verossímil**: esse campo não existe no SDK; contexto entre coordenador e subagente é só o que vai explícito no prompt de spawn.
 - **D — errada:** chamar `resume` duas vezes no id original, assumindo que cada `resume` cria um branch próprio — **equívoco de capacidade**: `resume` continua a mesma sessão pelo mesmo id; é `fork_session=True` que cria um branch novo, não `resume` isolado.
+
+**Tópicos:** Spawn de Subagentes, Resume e Fork de Sessão
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar

@@ -30,14 +30,20 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Ques
       cenario: "cenário",
       principioTestado: "princípio",
     },
+    topicos: ["Teste"],
   };
 }
 
-async function novaRodada(questoes: Questao[], limiteSegundos: number | null = null, dono = userId) {
+async function novaRodada(
+  questoes: Questao[],
+  limiteSegundos: number | null = null,
+  dono = userId,
+  modo: "pratica" | "prova" = "pratica",
+) {
   const { obterConexao } = await import("@/db/conexao");
   const { criarRodada } = await import("@/db/repositorioRodadas");
   const db = await obterConexao();
-  const id = await criarRodada(db, { userId: dono, questoes, modo: "pratica", limiteSegundos });
+  const id = await criarRodada(db, { userId: dono, questoes, modo, limiteSegundos });
   return { db, id };
 }
 
@@ -88,8 +94,8 @@ describe("GET /api/rodadas/:id/questoes/:indice", () => {
 });
 
 describe("POST /api/rodadas/:id/questoes/:indice — responder", () => {
-  it("grava a resposta, acumula segundosGastos e avança para a próxima", async () => {
-    const { id } = await novaRodada([questaoFake(1, "A"), questaoFake(2, "B")]);
+  it("modo prova: grava a resposta, acumula segundosGastos, avança para a próxima e nunca inclui feedback", async () => {
+    const { id } = await novaRodada([questaoFake(1, "A"), questaoFake(2, "B")], null, userId, "prova");
     const { POST } = await import("./route");
 
     const resposta = await POST(
@@ -102,12 +108,56 @@ describe("POST /api/rodadas/:id/questoes/:indice — responder", () => {
     expect(corpo.indiceAtual).toBe(1);
     expect(corpo.respostas).toEqual(["A", null]);
     expect(corpo.questaoAtual.posicao).toBe(1);
+    expect(corpo.feedback).toBeUndefined();
 
     // Confirma que o tempo foi mesmo persistido (não só devolvido).
     const { carregarRodada } = await import("@/db/repositorioRodadas");
     const { obterConexao } = await import("@/db/conexao");
     const persistida = (await carregarRodada(await obterConexao(), id, userId))!;
     expect(persistida.estado.tempos[0]).toBeCloseTo(12.5);
+  });
+
+  it("modo prática: grava a resposta e acumula segundosGastos, mas NÃO avança — devolve feedback (correta + explicações)", async () => {
+    const { id } = await novaRodada([questaoFake(1, "A"), questaoFake(2, "B")], null, userId, "pratica");
+    const { POST } = await import("./route");
+
+    const resposta = await POST(
+      post("http://localhost", { resposta: "C", segundosGastos: 12.5 }),
+      { params: Promise.resolve({ id: String(id), indice: "0" }) },
+    );
+
+    expect(resposta.status).toBe(200);
+    const corpo = await resposta.json();
+    expect(corpo.indiceAtual).toBe(0);
+    expect(corpo.respostas).toEqual(["C", null]);
+    expect(corpo.questaoAtual.posicao).toBe(0);
+    expect(corpo.feedback).toEqual({ correta: "A", explicacoes: { A: "a", B: "b", C: "c", D: "d" } });
+
+    // O tempo já é acumulado ao responder, mesmo sem avançar — quem olha
+    // para a questão continua "gastando" tempo nela.
+    const { carregarRodada } = await import("@/db/repositorioRodadas");
+    const { obterConexao } = await import("@/db/conexao");
+    const persistida = (await carregarRodada(await obterConexao(), id, userId))!;
+    expect(persistida.estado.tempos[0]).toBeCloseTo(12.5);
+    expect(persistida.estado.indice).toBe(0);
+  });
+
+  it("modo prática: uma segunda resposta na mesma posição sobrescreve a anterior, ainda sem avançar", async () => {
+    const { id } = await novaRodada([questaoFake(1, "A")], null, userId, "pratica");
+    const { POST } = await import("./route");
+
+    await POST(post("http://localhost", { resposta: "B", segundosGastos: 1 }), {
+      params: Promise.resolve({ id: String(id), indice: "0" }),
+    });
+    const resposta = await POST(
+      post("http://localhost", { resposta: "D", segundosGastos: 1 }),
+      { params: Promise.resolve({ id: String(id), indice: "0" }) },
+    );
+
+    const corpo = await resposta.json();
+    expect(corpo.indiceAtual).toBe(0);
+    expect(corpo.respostas).toEqual(["D"]);
+    expect(corpo.feedback.correta).toBe("A");
   });
 
   it("não permite agir sobre uma rodada de outro usuário (404)", async () => {

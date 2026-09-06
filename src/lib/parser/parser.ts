@@ -37,6 +37,9 @@ const EXPL = /^-\s*\*\*([A-D]) — (errada|correta)[:.]\*\*\s*(.*)$/;
 // Exportado: `src/lib/catalogo/index.ts` reaproveita para o mesmo fim
 // (grupo/ordem de um `Par`), em vez de duplicar o mesmo padrão.
 export const DOMINIO_RE = /^dominio-(\d+)$/;
+// Tags de tópico da questão: "**Tópicos:** Tag A, Tag B" — separado do bloco
+// de metadados porque, ao contrário dele, é candidato-facing.
+const TOPICOS_MARCADOR = /^\*\*Tópicos:\*\*\s*(.*)$/;
 // Início do bloco de metadados de revisão do gabarito.
 const METADADOS_MARCADOR = /^\*\*Metadados\b/;
 // Campo do bloco de metadados: "- Bloom: Aplicar" / "- Rubrica (§3): ...".
@@ -176,6 +179,27 @@ function parseMetadados(
   return campos as MetadadosQuestao;
 }
 
+/** Encontra e valida a linha "**Tópicos:** ..." de uma questão do gabarito.
+ *
+ * Roda depois de `parseMetadados` (não antes): assim, um gabarito sem bloco
+ * de metadados algum continua reportando "metadados ausente" (o erro mais
+ * genérico e anterior), em vez de ser mascarado por "tópicos ausentes". */
+function parseTopicos(corpo: string[], arquivo: string, numero: number): string[] {
+  const linha = corpo.find((l) => TOPICOS_MARCADOR.test(l.trim()));
+  if (linha === undefined) {
+    throw new FormatoInvalido(arquivo, numero, "linha '**Tópicos:**' ausente");
+  }
+  const m = TOPICOS_MARCADOR.exec(linha.trim())!;
+  const topicos = m[1]
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+  if (topicos.length === 0) {
+    throw new FormatoInvalido(arquivo, numero, "'**Tópicos:**' sem nenhum tópico");
+  }
+  return topicos;
+}
+
 /** Lista de questões do gabarito, na ordem do arquivo. */
 export function parseGabarito(texto: string, arquivo = "<memória>"): QuestaoGabarito[] {
   const resultado: QuestaoGabarito[] = [];
@@ -237,8 +261,9 @@ export function parseGabarito(texto: string, arquivo = "<memória>"): QuestaoGab
     }
 
     const metadados = parseMetadados(corpo, arquivo, numero);
+    const topicos = parseTopicos(corpo, arquivo, numero);
 
-    resultado.push({ numero, correta, resumo, explicacoes, metadados });
+    resultado.push({ numero, correta, resumo, explicacoes, metadados, topicos });
   }
 
   return resultado;
@@ -329,6 +354,7 @@ export function carregarPar(caminhoSimulado: string, caminhoGabarito: string): Q
       resumo: g.resumo,
       explicacoes: g.explicacoes,
       metadados: g.metadados,
+      topicos: g.topicos,
     });
   }
 

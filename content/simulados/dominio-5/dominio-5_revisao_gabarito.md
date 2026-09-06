@@ -17,6 +17,8 @@ O que se perdeu não foi volume, foi **um tipo de conteúdo**: valores, versões
 - **C — correta.**
 - **D — errada:** over-engineering, e ainda deixa a decisão dentro do caminho que falha: um classificador de "turno com restrição" acrescenta um modelo para escolher o que escapa da dobra, quando a restrição já existe em forma estruturada no próprio ticket e pode ser extraída por código.
 
+**Tópicos:** Contexto Longo
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Médio
@@ -32,6 +34,8 @@ Os três gatilhos já estão escritos, e mesmo assim o desk afoga: os três grup
 - **B — correta.**
 - **C — errada:** proxy plausível não confiável. Sentimento e complexidade são variáveis diferentes — o roteador léxico do exercício faz **2/6** contra um baseline burro de **3/6**, e nenhum limiar classifica os seis corretamente; o caso que nenhum corte conserta é justamente o furioso-mas-resolvível.
 - **D — errada:** over-engineering, e treinado sobre a população errada: os 200 escalados já são a saída do critério defeituoso. Um classificador de complexidade automatiza o adjetivo em vez de substituí-lo por condição verificável.
+
+**Tópicos:** Escalação de Ambiguidade
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -49,6 +53,8 @@ O time consertou um anti-padrão do K4 e caiu no oposto. `status` com dois valor
 - **C — errada:** over-engineering do arquétipo nº 1 — reconstruir com ML, a partir de texto livre, a distinção que um `enum` no contrato entrega de graça e sem ambiguidade. Classificar a `mensagem` é adivinhar o que o schema poderia ter afirmado.
 - **D — correta.**
 
+**Tópicos:** Propagação de Erros
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -64,6 +70,8 @@ O scratchpad tem **duas metades** — manter o arquivo **e** referenciá-lo nas 
 - **B — errada:** probabilístico onde o requisito é arquitetural, e é o **quase-certo** do item. Trocar "se for útil" por "você deve" reforça a mesma instrução no mesmo agente sem contexto; e mesmo cumprida, ela faz o subagente ler **96 entradas** para uma pergunta que precisa de duas ou três — troca uma degradação por outra.
 - **C — errada:** camada errada, e é a distinção 3.1 × 3.3 aplicada aqui: `CLAUDE.md` é contexto **sempre-carregado**, e achados efêmeros de uma investigação pertencem a um artefato **on-demand**, reinjetado por relevância. Importar 96 entradas em toda sessão é o oposto de gestão de contexto.
 - **D — errada:** camada/alvo errado — reforça a metade do mecanismo que já funciona. O arquivo é descrito como preciso e atual; escrever mais nele não faz ninguém lê-lo, e aumentar o volume torna a leitura futura mais cara.
+
+**Tópicos:** Contexto de Codebase
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -81,6 +89,8 @@ Aritmética de agregação, não amostragem: o número semanal é uma **média p
 - **C — correta.**
 - **D — errada:** proxy plausível não confiável. Confiança auto-reportada **sem calibração contra rótulo** não é sinal, e é justamente no erro sistemático de um segmento que ela costuma vir **alta** — o exercício mede a curva invertendo no topo (baixa 33,3% · média 100,0% · alta 98,1%).
 
+**Tópicos:** Revisão e Calibração
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Difícil
@@ -96,6 +106,8 @@ O S1 já está cumprido **na origem** — os registros do subagente estão 100% 
 - **B — correta.**
 - **C — errada:** over-engineering, e no pior lugar possível: re-atribuir depois **adivinha** o vínculo que já existia e foi descartado, produzindo procedência plausível e não verificada — que é pior que procedência ausente, porque afirma algo específico e falso.
 - **D — errada:** equívoco de capacidade, e é o **quase-certo** do item. Uma bibliografia mais detalhada aumenta o detalhe da **lista**, não o mapeamento **por afirmação**; com doze fontes citadas ao fim, o leitor continua sem saber qual delas sustenta qual conclusão.
+
+**Tópicos:** Proveniência e Síntese
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -113,6 +125,8 @@ Quebra-automatismo do domínio: depois de treinar "na dúvida, escale", este ite
 - **C — errada:** camada/alvo errado, e resolve metade do problema: o hook impede a escrita errada e **não resolve o caso**. O cliente continua sem atendimento e o chat continua indo para o desk — que é precisamente o custo que o enunciado quer eliminar.
 - **D — correta.**
 
+**Tópicos:** Escalação de Ambiguidade
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -129,6 +143,8 @@ O enunciado já entrega a metade contra-intuitiva, e quase todo mundo lê por ci
 - **C — errada:** probabilístico onde o requisito é de forma. Pedir ao sintetizador que narre a tendência troca o dado pela leitura que ele fez do dado: o leitor passa a depender de uma afirmação não conferível e continua sem a forma que permitiria checá-la — inclusive quando a narração estiver errada, como nos dois briefs.
 - **D — errada:** over-engineering — acrescenta um passo classificador para recuperar o que a forma correta exibe de graça, e publica um rótulo derivado ao lado de uma série que segue ilegível: se o rótulo errar, o leitor não tem como perceber.
 
+**Tópicos:** Proveniência e Síntese
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
 - Dificuldade: Difícil
@@ -144,6 +160,8 @@ O mesmo sintoma — dois valores candidatos para um campo — tem **dois desfech
 - **B — correta.**
 - **C — errada:** proxy plausível não confiável, aplicado às duas populações ao mesmo tempo. Nada na entrada ordena credibilidade; e no grupo interno a um documento o critério nem sequer se aplica — publicador é o **mesmo**, então o ranking não decide nada e a ambiguidade segue adiante em silêncio.
 - **D — errada:** voto/consenso que suprime sinal. Duas leituras do mesmo documento tendem a convergir na mesma parte dele e a descartar a divergente; o resultado é fabricar unanimidade sobre uma contradição real, e a auto-concordância de um modelo não é evidência externa.
+
+**Tópicos:** Proveniência e Síntese, Revisão e Calibração
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
@@ -162,6 +180,8 @@ O erro de camada mais provável do domínio: os dois envelopes existem para cois
 - **C — errada:** equívoco de capacidade — mais orçamento e mais variação de query supõem escassez onde não há: nenhuma re-consulta faz duas fontes credíveis passarem a concordar. É repetir no escuro, a mesma distração da questão-exemplo do guia sobre backoff com status genérico.
 - **D — correta.**
 
+**Tópicos:** Proveniência e Síntese, Propagação de Erros
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -179,6 +199,8 @@ São **dois problemas de camadas diferentes**, e só uma alternativa ataca os do
 - **C — errada:** equívoco de capacidade, cobrando dois preços de uma vez: janela maior não recupera trabalho de um processo que morreu (o estado nunca esteve numa janela) e não garante preservação do que a dobra descarta — adia a dobra, não a substitui por garantia.
 - **D — errada:** **acerta o lado do 5.4 e erra o do 5.1** — é o item que um candidato que estudou só o scratchpad marca. Exportar o estado dos módulos concluídos para um caminho conhecido e recarregá-lo no início resolve o crash; mas confiar no sumarizador para reproduzir os invariantes é probabilístico onde o requisito é garantia, e é literalmente o braço `resumo-instruido` do 5.1, que **empatou** com o resumo genérico (6/8 × 6/8, n=8, um modelo). Só o bloco reenviado fora do histórico tira o sumarizador do caminho.
 
+**Tópicos:** Contexto de Codebase, Contexto Longo
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar
 - Dificuldade: Difícil
@@ -195,6 +217,8 @@ Os dois mecanismos decidem coisas **diferentes**, e a calibração medida autori
 - **B — errada:** camada/alvo errado — é a Questão 3 do guia aplicada onde ela não vale. O guia reprova confiança auto-reportada **sem calibração**; a condição que separa distrator de skill é ser **medida contra rótulo**, e aqui ela é, com faixas monotônicas e `n` por segmento. Descartar o instrumento validado joga fora a única medição confiável do enunciado.
 - **C — correta.**
 - **D — errada:** over-engineering, e destrói a separação que faz o sistema funcionar: um score único mistura duas decisões com custos de erro diferentes, foi treinado sobre rótulos que só cobrem reembolso, e substitui gatilhos auditáveis por uma saída que ninguém consegue explicar a um cliente que pediu uma pessoa.
+
+**Tópicos:** Escalação de Ambiguidade, Revisão e Calibração
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Avaliar

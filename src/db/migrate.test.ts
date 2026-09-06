@@ -29,6 +29,7 @@ describe("migrate", () => {
     expect(versoes.rows.map((linha) => linha.version)).toEqual([
       "001_initial.sql",
       "002_password_reset_tokens.sql",
+      "003_topicos_questoes_rodada.sql",
     ]);
   });
 
@@ -37,7 +38,7 @@ describe("migrate", () => {
     await expect(migrar(pool)).resolves.not.toThrow();
   });
 
-  it("'questoes_rodada' tem todas as colunas do contrato, incluindo os 5 campos de metadados", async () => {
+  it("'questoes_rodada' tem todas as colunas do contrato, incluindo os 5 campos de metadados e tópicos", async () => {
     await migrar(pool);
 
     const colunas = await pool.query<{ column_name: string }>(
@@ -64,6 +65,7 @@ describe("migrate", () => {
       "principio_testado",
       "resposta",
       "segundos",
+      "topicos_json",
     ]);
   });
 

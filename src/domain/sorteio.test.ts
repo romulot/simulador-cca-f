@@ -32,6 +32,7 @@ function questaoFake(dominio: number | null, numero: number): Questao {
       cenario: "cenario",
       principioTestado: "principio",
     },
+    topicos: ["teste"],
   };
 }
 

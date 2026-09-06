@@ -16,6 +16,7 @@ import {
   placar,
   proximaEmBranco,
   responder,
+  responderSemAvancar,
   restaurarFinalizada,
   tudoRespondido,
   voltar,
@@ -39,6 +40,7 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Ques
       cenario: "cenário",
       principioTestado: "princípio",
     },
+    topicos: ["Teste"],
   };
 }
 
@@ -136,6 +138,53 @@ describe("tempo por visita à questão (não por resposta)", () => {
     expect(estado.tempos[0]).toBeCloseTo(7);
     expect(estado.indice).toBe(1);
     expect(estado.respostas[0]).toBe("A");
+  });
+});
+
+describe("responderSemAvancar()", () => {
+  it("grava a resposta mas não avança nem fecha o tempo da questão", () => {
+    const questoes = [questaoFake(1), questaoFake(2)];
+    let estado = criarRodada(questoes, { embaralhar: false });
+    const { relogio, avancarPara } = relogioControlado();
+    estado = iniciar(estado, relogio);
+    avancarPara(7);
+    estado = responderSemAvancar(estado, "A", relogio);
+
+    expect(estado.respostas[0]).toBe("A");
+    expect(estado.indice).toBe(0);
+    // Diferente de responder(): o tempo não fecha aqui — a questão continua
+    // em cena, então quem fecha é irPara()/avancar(), chamado depois.
+    expect(estado.tempos[0]).toBe(0);
+  });
+
+  it("sobrescreve uma resposta já dada, ainda sem avançar", () => {
+    const questoes = [questaoFake(1, "B")];
+    let estado = criarRodada(questoes, { embaralhar: false });
+    const { relogio } = relogioControlado();
+    estado = iniciar(estado, relogio);
+    estado = responderSemAvancar(estado, "A", relogio);
+    estado = responderSemAvancar(estado, "C", relogio);
+
+    expect(estado.respostas[0]).toBe("C");
+    expect(estado.indice).toBe(0);
+  });
+
+  it("não faz nada se a rodada já encerrou", () => {
+    const questoes = [questaoFake(1)];
+    let estado = criarRodada(questoes, { embaralhar: false });
+    const { relogio } = relogioControlado();
+    estado = iniciar(estado, relogio);
+    estado = encerrar(estado, relogio);
+    const depois = responderSemAvancar(estado, "A", relogio);
+    expect(depois).toBe(estado);
+  });
+
+  it("não faz nada se iniciar() nunca foi chamado", () => {
+    const questoes = [questaoFake(1)];
+    const estado = criarRodada(questoes, { embaralhar: false });
+    const { relogio } = relogioControlado();
+    const depois = responderSemAvancar(estado, "A", relogio);
+    expect(depois).toBe(estado);
   });
 });
 

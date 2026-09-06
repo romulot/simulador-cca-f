@@ -47,6 +47,8 @@ Resposta para a questão ${numero}.
 - **C — errada:** Porque não é C
 - **D — errada:** Porque não é D
 
+**Tópicos:** Teste
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Lembrar
 - Dificuldade: Fácil
@@ -113,6 +115,14 @@ describe("parser", () => {
             expect(q.explicacoes.B).toBeTruthy();
             expect(q.explicacoes.C).toBeTruthy();
             expect(q.explicacoes.D).toBeTruthy();
+
+            // Validar tópicos (Fase 1 do plano de aprendizado): ao menos um.
+            expect(q.topicos).toBeDefined();
+            expect(q.topicos.length).toBeGreaterThan(0);
+            for (const topico of q.topicos) {
+              expect(topico.trim()).toBe(topico);
+              expect(topico).not.toBe("");
+            }
           }
         }
       }
@@ -229,6 +239,8 @@ O requisito é rodar a skill automaticamente.
 - **C — correta:**
 - **D — errada:** Explicação D
 
+**Tópicos:** Commands e Skills
+
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
 - Dificuldade: Médio
@@ -244,6 +256,8 @@ Outra questão de exemplo.
 - **B — errada:** Explicação B
 - **C — errada:** Explicação C
 - **D — errada:** Explicação D
+
+**Tópicos:** Commands e Skills
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Aplicar
@@ -290,6 +304,8 @@ Requisito sobre least privilege.
 - **B — errada:** Hook PostToolUse
 - **C — errada:** Taxa de acerto passada
 - **D — correta:**
+
+**Tópicos:** Path Rules
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Analisar
@@ -471,6 +487,8 @@ Resposta para a questão ${numero}.
 - **B — errada:** Porque não é B
 - **C — errada:** Porque não é C
 - **D — errada:** Porque não é D
+
+**Tópicos:** Teste
 
 **Metadados (revisão; não exibir ao candidato):**
 - Bloom: Lembrar

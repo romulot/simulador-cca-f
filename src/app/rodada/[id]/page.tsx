@@ -28,6 +28,14 @@ interface QuestaoCliente {
   alternativas: Record<Letra, string>;
 }
 
+/** Presente na resposta da API só no modo prática, só depois de responder
+ * (nunca no modo prova — lá a explicação só aparece depois que a rodada
+ * inteira encerra, na tela de resultado). */
+interface FeedbackResposta {
+  correta: Letra;
+  explicacoes: Record<Letra, string>;
+}
+
 interface EstadoRodada {
   rodadaId: number;
   modo: "pratica" | "prova";
@@ -61,6 +69,7 @@ export default function TelaRodada() {
   const [estado, setEstado] = useState<EstadoRodada | null>(null);
   const [erroCarregar, setErroCarregar] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackResposta | null>(null);
   const [confirmandoFim, setConfirmandoFim] = useState(false);
   const mostradaEm = useRef<number>(0);
   const finalizandoPorTempo = useRef(false);
@@ -134,6 +143,10 @@ export default function TelaRodada() {
             }
           : anterior,
       );
+      // Presente só quando acabou de responder no modo prática; ausente em
+      // qualquer navegação (`destino`) ou no modo prova — o que limpa o
+      // painel de feedback assim que o candidato sai da questão.
+      setFeedback(corpoResposta.feedback ?? null);
       mostradaEm.current = Date.now();
     } finally {
       setEnviando(false);
@@ -165,6 +178,9 @@ export default function TelaRodada() {
       if (!estado || enviando) return;
       const letra = e.key.toUpperCase();
       if (LETRAS.includes(letra as Letra)) {
+        // Enquanto o feedback da resposta atual está em tela, A–D não
+        // reenvia — o candidato usa →/Avançar para seguir em frente.
+        if (feedback) return;
         enviarAcao({ resposta: letra as Letra });
       } else if (e.key === "ArrowRight" && estado.indiceAtual < estado.totalQuestoes - 1) {
         enviarAcao({ destino: estado.indiceAtual + 1 });
@@ -175,7 +191,7 @@ export default function TelaRodada() {
     window.addEventListener("keydown", aoTeclar);
     return () => window.removeEventListener("keydown", aoTeclar);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estado, enviando, confirmandoFim]);
+  }, [estado, enviando, confirmandoFim, feedback]);
 
   if (erroCarregar) {
     return (
@@ -223,6 +239,16 @@ export default function TelaRodada() {
           <div className="pilha" role="group" aria-label="Alternativas">
             {LETRAS.map((letra) => {
               const marcada = estado.respostas[estado.indiceAtual] === letra;
+              const ehCorreta = feedback?.correta === letra;
+              const corDaBorda = feedback
+                ? ehCorreta
+                  ? "var(--acerto)"
+                  : marcada
+                    ? "var(--erro)"
+                    : undefined
+                : marcada
+                  ? "var(--acento)"
+                  : undefined;
               return (
                 <button
                   key={letra}
@@ -231,20 +257,62 @@ export default function TelaRodada() {
                   style={{
                     justifyContent: "flex-start",
                     textAlign: "left",
-                    borderColor: marcada ? "var(--acento)" : undefined,
-                    background: marcada ? "var(--painel-fraco)" : undefined,
+                    borderColor: corDaBorda,
+                    background: marcada && !feedback ? "var(--painel-fraco)" : undefined,
+                    // `.botao:disabled` apaga a opacidade para 0.45 — correto
+                    // para um botão comum inativo, mas aqui apagaria
+                    // justamente a cor de certo/errado que é o conteúdo.
+                    opacity: feedback ? 1 : undefined,
                   }}
-                  disabled={enviando}
+                  disabled={enviando || feedback !== null}
                   aria-pressed={marcada}
                   onClick={() => enviarAcao({ resposta: letra })}
                 >
                   <span className="mono">{letra})</span> {questaoAtual.alternativas[letra]}
                   {marcada && <span className="visualmente-oculto"> (selecionada)</span>}
+                  {feedback && ehCorreta && (
+                    <span className="badge badge-acerto" style={{ marginLeft: "0.5em" }}>
+                      ← correta
+                    </span>
+                  )}
+                  {feedback && marcada && !ehCorreta && (
+                    <span className="badge badge-erro" style={{ marginLeft: "0.5em" }}>
+                      ← sua resposta
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
         </section>
+
+        {feedback && (
+          <section className="painel pilha" aria-live="polite">
+            <p
+              className={`mensagem ${estado.respostas[estado.indiceAtual] === feedback.correta ? "mensagem-sucesso" : "mensagem-erro"}`}
+              role="status"
+            >
+              {estado.respostas[estado.indiceAtual] === feedback.correta
+                ? "✓ Resposta correta"
+                : "✕ Resposta incorreta"}
+            </p>
+            <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
+              Por que {feedback.correta} está correta?
+            </p>
+            <p style={{ margin: 0 }}>{feedback.explicacoes[feedback.correta]}</p>
+            {estado.respostas[estado.indiceAtual] !== null &&
+              estado.respostas[estado.indiceAtual] !== feedback.correta && (
+                <>
+                  <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
+                    Por que {estado.respostas[estado.indiceAtual]} está incorreta?
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    {feedback.explicacoes[estado.respostas[estado.indiceAtual] as Letra]}
+                  </p>
+                </>
+              )}
+          </section>
+        )}
 
         <div className="espaco-entre">
           <button

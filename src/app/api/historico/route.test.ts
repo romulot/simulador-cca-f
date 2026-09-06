@@ -30,6 +30,7 @@ function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A"): Ques
       cenario: "cenário",
       principioTestado: "princípio",
     },
+    topicos: ["Teste"],
   };
 }
 

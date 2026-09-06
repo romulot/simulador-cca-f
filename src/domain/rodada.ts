@@ -237,6 +237,19 @@ export function responder(estado: RodadaEstado, letra: Letra, relogio: Relogio):
   return avancar({ ...estado, respostas }, relogio);
 }
 
+/** Grava (ou sobrescreve) a resposta da questão atual SEM avançar — usado
+ * pela rota da API no modo prática, para mostrar feedback (resposta certa +
+ * explicação) antes de o candidato de fato sair da questão. Mesmo guard de
+ * `responder()`. Não fecha o tempo da questão (ela continua em cena): quem
+ * fecha é `irPara`/`avancar`, chamado depois, quando o candidato clica para
+ * continuar. */
+export function responderSemAvancar(estado: RodadaEstado, letra: Letra, relogio: Relogio): RodadaEstado {
+  if (encerrada(estado, relogio) || estado.inicioEm === null) return estado;
+  const respostas = [...estado.respostas];
+  respostas[estado.indice] = letra;
+  return { ...estado, respostas };
+}
+
 /** True quando não resta questão em branco. */
 export function tudoRespondido(estado: RodadaEstado): boolean {
   return estado.questoes.length > 0 && estado.respostas.every((r) => r !== null);
