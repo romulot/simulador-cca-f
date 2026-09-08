@@ -30,6 +30,7 @@ describe("migrate", () => {
       "001_initial.sql",
       "002_password_reset_tokens.sql",
       "003_topicos_questoes_rodada.sql",
+      "004_arquivada_rodadas.sql",
     ]);
   });
 
@@ -90,6 +91,7 @@ describe("migrate", () => {
       "cotas_json",
       "disponivel_json",
       "deficit_json",
+      "arquivada",
     ]);
   });
 

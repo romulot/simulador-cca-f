@@ -207,6 +207,10 @@ export default function Menu() {
           >
             Meus pontos fracos
           </Link>
+
+          <Link href="/gerenciar-progresso" className="botao botao-fantasma botao-bloco">
+            Gerenciar progresso
+          </Link>
         </div>
 
         {desempenhoGeral !== null && (

@@ -135,6 +135,15 @@ describe("repositorioHistorico", () => {
     expect(entradaBoa.placar!.acertos).toBe(1);
   });
 
+  it("rodada com arquivada = TRUE não aparece no histórico nem na contagem", async () => {
+    const id = await criarRodadaFinalizada(userId, { questoes: [questaoFake(1, "A")], respostas: ["A"] });
+    await pool.query("UPDATE rodadas SET arquivada = TRUE WHERE id = $1", [id]);
+
+    expect(await listarHistorico(pool, userId)).toEqual([]);
+    expect(await contarHistorico(pool, userId)).toBe(0);
+    expect(await ultimaEntradaHistorico(pool, userId)).toBeNull();
+  });
+
   it("carregarEntradaHistorico devolve null para id inexistente (não é erro de dado, é ausência)", async () => {
     expect(await carregarEntradaHistorico(pool, 999999, userId)).toBeNull();
   });

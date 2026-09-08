@@ -4,7 +4,7 @@ import type { Pool } from "pg";
 import type { Questao } from "@/lib/parser/tipos";
 import { criarRodada as criarEstado, encerrar, iniciar, responder, type Relogio } from "@/domain/rodada";
 import { poolTeste, criarUsuarioTeste } from "./apoioTeste";
-import { carregarRodada, criarRodada, salvarRodada } from "./repositorioRodadas";
+import { arquivarTodasRodadas, carregarRodada, criarRodada, deletarTodasRodadas, salvarRodada } from "./repositorioRodadas";
 
 function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A", dominio: number | null = 1): Questao {
   return {
@@ -146,6 +146,77 @@ describe("repositorioRodadas", () => {
     expect(recarregada.status).toBe("finalizada");
     expect(recarregada.estado.fimEm).toBeCloseTo(30);
     expect(recarregada.estado.esgotouTempo).toBe(false);
+  });
+
+  describe("arquivarTodasRodadas", () => {
+    it("marca todas as rodadas do usuário como arquivada = TRUE, incluindo em_andamento", async () => {
+      const idFinalizada = await criarRodada(pool, { userId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+      const { relogio } = relogioControlado();
+      const estadoEncerrado = encerrar(iniciar(criarEstado([questaoFake(1)], { embaralhar: false }), relogio), relogio);
+      await salvarRodada(pool, idFinalizada, estadoEncerrado, relogio, userId);
+
+      const idEmAndamento = await criarRodada(pool, { userId, questoes: [questaoFake(2)], modo: "pratica", limiteSegundos: null });
+
+      await arquivarTodasRodadas(pool, userId);
+
+      const resultado = await pool.query<{ id: number; arquivada: boolean }>(
+        "SELECT id, arquivada FROM rodadas WHERE user_id = $1 ORDER BY id",
+        [userId],
+      );
+      expect(resultado.rows).toHaveLength(2);
+      expect(resultado.rows.every((r) => r.arquivada)).toBe(true);
+      expect(resultado.rows.map((r) => r.id)).toContain(idFinalizada);
+      expect(resultado.rows.map((r) => r.id)).toContain(idEmAndamento);
+    });
+
+    it("não afeta rodadas de outro usuário", async () => {
+      await criarRodada(pool, { userId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+      const idOutro = await criarRodada(pool, { userId: outroUsuarioId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+
+      await arquivarTodasRodadas(pool, userId);
+
+      const resultado = await pool.query<{ arquivada: boolean }>(
+        "SELECT arquivada FROM rodadas WHERE id = $1",
+        [idOutro],
+      );
+      expect(resultado.rows[0].arquivada).toBe(false);
+    });
+  });
+
+  describe("deletarTodasRodadas", () => {
+    it("remove todas as rodadas e questoes_rodada do usuário (CASCADE)", async () => {
+      const id = await criarRodada(pool, { userId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+
+      await deletarTodasRodadas(pool, userId);
+
+      const rodadas = await pool.query("SELECT id FROM rodadas WHERE user_id = $1", [userId]);
+      expect(rodadas.rows).toHaveLength(0);
+
+      const questoes = await pool.query("SELECT rodada_id FROM questoes_rodada WHERE rodada_id = $1", [id]);
+      expect(questoes.rows).toHaveLength(0);
+    });
+
+    it("inclui rodadas em andamento na exclusão", async () => {
+      await criarRodada(pool, { userId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+      const { relogio } = relogioControlado();
+      const idFinalizada = await criarRodada(pool, { userId, questoes: [questaoFake(2)], modo: "pratica", limiteSegundos: null });
+      await salvarRodada(pool, idFinalizada, encerrar(iniciar(criarEstado([questaoFake(2)], { embaralhar: false }), relogio), relogio), relogio, userId);
+
+      await deletarTodasRodadas(pool, userId);
+
+      const resultado = await pool.query("SELECT id FROM rodadas WHERE user_id = $1", [userId]);
+      expect(resultado.rows).toHaveLength(0);
+    });
+
+    it("não afeta rodadas de outro usuário", async () => {
+      await criarRodada(pool, { userId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+      const idOutro = await criarRodada(pool, { userId: outroUsuarioId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
+
+      await deletarTodasRodadas(pool, userId);
+
+      const resultado = await pool.query<{ id: number }>("SELECT id FROM rodadas WHERE id = $1", [idOutro]);
+      expect(resultado.rows).toHaveLength(1);
+    });
   });
 
   it("uma rodada em andamento recarregada tem inicioEm derivado de iniciada_em, não de agora", async () => {

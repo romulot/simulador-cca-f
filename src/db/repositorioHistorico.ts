@@ -84,7 +84,7 @@ export async function carregarEntradaHistorico(
  * IDENTITY`). */
 export async function listarHistorico(pool: Pool, userId: number): Promise<EntradaHistorico[]> {
   const resultado = await pool.query<{ id: number }>(
-    "SELECT id FROM rodadas WHERE user_id = $1 AND status = 'finalizada' ORDER BY id DESC",
+    "SELECT id FROM rodadas WHERE user_id = $1 AND status = 'finalizada' AND arquivada = FALSE ORDER BY id DESC",
     [userId],
   );
 
@@ -107,7 +107,7 @@ export async function ultimaEntradaHistorico(
   userId: number,
 ): Promise<EntradaHistorico | null> {
   const resultado = await pool.query<{ id: number }>(
-    "SELECT id FROM rodadas WHERE user_id = $1 AND status = 'finalizada' ORDER BY id DESC LIMIT 1",
+    "SELECT id FROM rodadas WHERE user_id = $1 AND status = 'finalizada' AND arquivada = FALSE ORDER BY id DESC LIMIT 1",
     [userId],
   );
   const linha = resultado.rows[0];
@@ -119,7 +119,7 @@ export async function ultimaEntradaHistorico(
  * redesenhos frequentes de tela que só precisam da contagem). */
 export async function contarHistorico(pool: Pool, userId: number): Promise<number> {
   const resultado = await pool.query<{ n: string }>(
-    "SELECT COUNT(*) AS n FROM rodadas WHERE user_id = $1 AND status = 'finalizada'",
+    "SELECT COUNT(*) AS n FROM rodadas WHERE user_id = $1 AND status = 'finalizada' AND arquivada = FALSE",
     [userId],
   );
   return Number(resultado.rows[0].n);

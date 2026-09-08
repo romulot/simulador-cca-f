@@ -103,6 +103,12 @@ describe("repositorioAprendizado", () => {
     expect(await respostasBrutas(pool, userId)).toHaveLength(1);
   });
 
+  it("ignora rodada finalizada com arquivada = TRUE", async () => {
+    const id = await criarRodadaFinalizada(userId, [questaoFake("a", 1)], ["A"]);
+    await pool.query("UPDATE rodadas SET arquivada = TRUE WHERE id = $1", [id]);
+    expect(await respostasBrutas(pool, userId)).toEqual([]);
+  });
+
   it("vem ordenado por rodada (mais antiga primeiro)", async () => {
     await criarRodadaFinalizada(userId, [questaoFake("a", 1)], ["A"]);
     await criarRodadaFinalizada(userId, [questaoFake("a", 1)], ["B"]);

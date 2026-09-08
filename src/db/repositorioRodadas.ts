@@ -267,6 +267,21 @@ export async function carregarRodada(
   };
 }
 
+/** Marca todas as rodadas do usuário como arquivadas (soft-delete).
+ *
+ * Inclui rodadas `em_andamento` — evita que o usuário fique com sessão ativa
+ * "fantasma" após um reset de progresso. */
+export async function arquivarTodasRodadas(pool: Pool, userId: number): Promise<void> {
+  await pool.query("UPDATE rodadas SET arquivada = TRUE WHERE user_id = $1", [userId]);
+}
+
+/** Apaga permanentemente todas as rodadas do usuário e suas questões (CASCADE).
+ *
+ * Operação irreversível — usar apenas com confirmação explícita do usuário. */
+export async function deletarTodasRodadas(pool: Pool, userId: number): Promise<void> {
+  await pool.query("DELETE FROM rodadas WHERE user_id = $1", [userId]);
+}
+
 /** Persiste as mutações de um `RodadaEstado` já carregado (respostas,
  * tempos, índice, e — se a rodada acabou de encerrar — status e
  * `decorrido_segundos`/`esgotou_tempo`).
