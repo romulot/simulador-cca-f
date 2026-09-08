@@ -168,12 +168,17 @@ a {
 
 .painel-titulo {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid var(--borda);
+}
+
+.painel-titulo > * {
+  min-width: 0;
 }
 
 .painel-titulo h2 {
@@ -408,6 +413,8 @@ a {
 }
 .campo-senha-controle:disabled { opacity: 0.45; cursor: not-allowed; }
 .rotulo-linha { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+.rotulo-linha { flex-wrap: wrap; }
+.rotulo-linha > * { min-width: 0; }
 .rotulo-linha .rotulo { margin-bottom: 0.35em; }
 .link-secundario { font: 0.78rem var(--fonte-mono); }
 .mensagem { margin: 0; padding: 0.7rem 0.8rem; border-left: 3px solid; background: var(--painel-fraco); font-size: 0.85rem; }
@@ -427,6 +434,8 @@ code {
   border: 1px solid var(--borda);
   border-radius: 3px;
   padding: 0.1em 0.35em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* -- utilitários ----------------------------------------------------------- */
@@ -439,15 +448,36 @@ code {
 
 .linha {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
 }
+.linha > * { min-width: 0; }
 
 .espaco-entre {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+}
+.espaco-entre > * { min-width: 0; }
+
+.texto-quebra {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.botao-alternativa {
+  min-width: 0;
+  flex-wrap: wrap;
+  white-space: normal;
+  row-gap: 0.35em;
+}
+
+.texto-alternativa {
+  min-width: 0;
+  flex: 1 1 16rem;
 }
 
 .texto-fraco {

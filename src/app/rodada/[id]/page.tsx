@@ -236,7 +236,9 @@ export default function TelaRodada() {
         <Trilha celulas={celulasDeRespostas(estado.respostas, estado.indiceAtual)} />
 
         <section className="painel pilha">
-          <p style={{ fontSize: "1.05rem" }}><TextoMarkdownInline texto={questaoAtual.enunciado} /></p>
+          <p className="texto-quebra" style={{ fontSize: "1.05rem" }}>
+            <TextoMarkdownInline texto={questaoAtual.enunciado} />
+          </p>
           <div className="pilha" role="group" aria-label="Alternativas">
             {LETRAS.map((letra) => {
               const marcada = estado.respostas[estado.indiceAtual] === letra;
@@ -254,7 +256,7 @@ export default function TelaRodada() {
                 <button
                   key={letra}
                   type="button"
-                  className="botao"
+                  className="botao botao-alternativa"
                   style={{
                     justifyContent: "flex-start",
                     textAlign: "left",
@@ -269,7 +271,10 @@ export default function TelaRodada() {
                   aria-pressed={marcada}
                   onClick={() => enviarAcao({ resposta: letra })}
                 >
-                  <span className="mono">{letra})</span> <TextoMarkdownInline texto={questaoAtual.alternativas[letra]} />
+                  <span className="mono">{letra})</span>{" "}
+                  <span className="texto-quebra texto-alternativa">
+                    <TextoMarkdownInline texto={questaoAtual.alternativas[letra]} />
+                  </span>
                   {marcada && <span className="visualmente-oculto"> (selecionada)</span>}
                   {feedback && ehCorreta && (
                     <span className="badge badge-acerto" style={{ marginLeft: "0.5em" }}>
@@ -300,14 +305,16 @@ export default function TelaRodada() {
             <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
               Por que {feedback.correta} está correta?
             </p>
-            <p style={{ margin: 0 }}><TextoMarkdownInline texto={feedback.explicacoes[feedback.correta]} /></p>
+            <p className="texto-quebra" style={{ margin: 0 }}>
+              <TextoMarkdownInline texto={feedback.explicacoes[feedback.correta]} />
+            </p>
             {estado.respostas[estado.indiceAtual] !== null &&
               estado.respostas[estado.indiceAtual] !== feedback.correta && (
                 <>
                   <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
                     Por que {estado.respostas[estado.indiceAtual]} está incorreta?
                   </p>
-                  <p style={{ margin: 0 }}>
+                  <p className="texto-quebra" style={{ margin: 0 }}>
                     <TextoMarkdownInline texto={feedback.explicacoes[estado.respostas[estado.indiceAtual] as Letra]} />
                   </p>
                 </>
