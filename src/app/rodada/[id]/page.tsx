@@ -15,6 +15,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Cronometro } from "@/components/Cronometro";
 import { Trilha, celulasDeRespostas } from "@/components/Trilha";
 import { Dicas } from "@/components/Dicas";
+import { TextoMarkdownInline } from "@/components/TextoMarkdownInline";
 
 type Letra = "A" | "B" | "C" | "D";
 const LETRAS: Letra[] = ["A", "B", "C", "D"];
@@ -235,7 +236,7 @@ export default function TelaRodada() {
         <Trilha celulas={celulasDeRespostas(estado.respostas, estado.indiceAtual)} />
 
         <section className="painel pilha">
-          <p style={{ fontSize: "1.05rem" }}>{questaoAtual.enunciado}</p>
+          <p style={{ fontSize: "1.05rem" }}><TextoMarkdownInline texto={questaoAtual.enunciado} /></p>
           <div className="pilha" role="group" aria-label="Alternativas">
             {LETRAS.map((letra) => {
               const marcada = estado.respostas[estado.indiceAtual] === letra;
@@ -268,7 +269,7 @@ export default function TelaRodada() {
                   aria-pressed={marcada}
                   onClick={() => enviarAcao({ resposta: letra })}
                 >
-                  <span className="mono">{letra})</span> {questaoAtual.alternativas[letra]}
+                  <span className="mono">{letra})</span> <TextoMarkdownInline texto={questaoAtual.alternativas[letra]} />
                   {marcada && <span className="visualmente-oculto"> (selecionada)</span>}
                   {feedback && ehCorreta && (
                     <span className="badge badge-acerto" style={{ marginLeft: "0.5em" }}>
@@ -299,7 +300,7 @@ export default function TelaRodada() {
             <p className="texto-pequeno texto-fraco" style={{ margin: 0 }}>
               Por que {feedback.correta} está correta?
             </p>
-            <p style={{ margin: 0 }}>{feedback.explicacoes[feedback.correta]}</p>
+            <p style={{ margin: 0 }}><TextoMarkdownInline texto={feedback.explicacoes[feedback.correta]} /></p>
             {estado.respostas[estado.indiceAtual] !== null &&
               estado.respostas[estado.indiceAtual] !== feedback.correta && (
                 <>
@@ -307,7 +308,7 @@ export default function TelaRodada() {
                     Por que {estado.respostas[estado.indiceAtual]} está incorreta?
                   </p>
                   <p style={{ margin: 0 }}>
-                    {feedback.explicacoes[estado.respostas[estado.indiceAtual] as Letra]}
+                    <TextoMarkdownInline texto={feedback.explicacoes[estado.respostas[estado.indiceAtual] as Letra]} />
                   </p>
                 </>
               )}

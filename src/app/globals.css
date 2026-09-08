@@ -418,6 +418,17 @@ a {
 .envelope-auth { max-width: 560px; }
 .sobretitulo { margin: 0 0 0.35rem; color: var(--acento); font: 600 0.75rem var(--fonte-mono); letter-spacing: 0.08em; text-transform: uppercase; }
 
+/* -- código inline nos enunciados e explicações ---------------------------- */
+
+code {
+  font-family: var(--fonte-mono);
+  font-size: 0.88em;
+  background: var(--painel-fraco);
+  border: 1px solid var(--borda);
+  border-radius: 3px;
+  padding: 0.1em 0.35em;
+}
+
 /* -- utilitários ----------------------------------------------------------- */
 
 .pilha {

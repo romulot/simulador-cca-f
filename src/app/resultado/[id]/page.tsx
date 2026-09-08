@@ -14,6 +14,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { Barra } from "@/components/Barra";
+import { TextoMarkdownInline } from "@/components/TextoMarkdownInline";
 import { formatarData, formatarPercentual, mmss } from "@/lib/formatacao";
 import { PESOS } from "@/domain/sorteio";
 import { topicoPorNome } from "@/domain/topicos";
@@ -279,7 +280,7 @@ export default function TelaResultado() {
                   Q{q.posicao + 1} · {q.origem} Q{q.numero} · marcou {q.resposta} · correta{" "}
                   {q.correta}
                 </h3>
-                <p>{q.enunciado}</p>
+                <p><TextoMarkdownInline texto={q.enunciado} /></p>
                 <div className="pilha">
                   {(Object.keys(q.alternativas) as Letra[]).map((letra) => {
                     const ehCorreta = letra === q.correta;
@@ -287,7 +288,7 @@ export default function TelaResultado() {
                     return (
                       <div key={letra}>
                         <p style={{ margin: 0 }}>
-                          <strong className="mono">{letra})</strong> {q.alternativas[letra]}
+                          <strong className="mono">{letra})</strong> <TextoMarkdownInline texto={q.alternativas[letra]} />
                           {ehCorreta && (
                             <span className="badge badge-acerto" style={{ marginLeft: "0.5em" }}>
                               ← correta
@@ -300,7 +301,7 @@ export default function TelaResultado() {
                           )}
                         </p>
                         <p className="texto-pequeno texto-fraco" style={{ marginLeft: "1.3em" }}>
-                          {q.explicacoes[letra]}
+                          <TextoMarkdownInline texto={q.explicacoes[letra]} />
                         </p>
                       </div>
                     );
