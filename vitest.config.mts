@@ -13,6 +13,7 @@ export default defineConfig({
     },
   },
   test: {
+    globalSetup: "./src/db/testGlobalSetup.ts",
     environment: "node",
     // Testes de repositório/rotas precisam de um Postgres real (ver
     // src/db/apoioTeste.ts) — default para o Postgres local de

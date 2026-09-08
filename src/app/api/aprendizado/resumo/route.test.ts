@@ -167,6 +167,25 @@ describe("GET /api/aprendizado/resumo", () => {
     expect(corpo.pontosFortes).toEqual([{ topicoId: "hooks", nome: "Hooks", percentual: 100 }]);
   });
 
+  it("rodadas arquivadas não entram no resumo — emRevisao, desempenhoGeral e pontosFortes zeram", async () => {
+    const id = await rodadaFinalizada(
+      [questaoFake("a", 1, "A", ["Hooks"]), questaoFake("a", 2, "A", ["Hooks"])],
+      ["B", "A"],
+    );
+    const pool = await poolTeste();
+    await pool.query("UPDATE rodadas SET arquivada = TRUE WHERE id = $1", [id]);
+
+    const { GET } = await import("./route");
+    const corpo = await (await GET(get("http://localhost"))).json();
+    expect(corpo).toEqual({
+      dominios: [],
+      emRevisao: 0,
+      desempenhoGeral: null,
+      pontosFortes: [],
+      errosRecorrentes: [],
+    });
+  });
+
   it("marca dificuldade recorrente a partir de 3 erros no mesmo tópico", async () => {
     await rodadaFinalizada(
       [
