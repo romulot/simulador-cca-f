@@ -16,6 +16,7 @@ import { Cronometro } from "@/components/Cronometro";
 import { Trilha, celulasDeRespostas } from "@/components/Trilha";
 import { Dicas } from "@/components/Dicas";
 import { TextoMarkdownInline } from "@/components/TextoMarkdownInline";
+import { iniciarPollingRodada } from "@/lib/api/pollingRodada";
 
 type Letra = "A" | "B" | "C" | "D";
 const LETRAS: Letra[] = ["A", "B", "C", "D"];
@@ -73,7 +74,9 @@ export default function TelaRodada() {
   const [feedback, setFeedback] = useState<FeedbackResposta | null>(null);
   const [confirmandoFim, setConfirmandoFim] = useState(false);
   const mostradaEm = useRef<number>(0);
-  const finalizandoPorTempo = useRef(false);
+  const finalizando = useRef(false);
+  const sincronizando = useRef(false);
+  const estadoRef = useRef<EstadoRodada | null>(null);
   const confirmacaoRef = useRef<HTMLDivElement>(null);
   const botaoFinalizarRef = useRef<HTMLButtonElement>(null);
 
@@ -85,34 +88,56 @@ export default function TelaRodada() {
   }, [confirmandoFim]);
 
   const carregar = useCallback(async () => {
-    const resposta = await fetch(`/api/rodadas/${id}`);
-    if (!resposta.ok) {
-      if (resposta.status === 404) setErroCarregar("rodada não encontrada");
-      return null;
+    if (sincronizando.current) return null;
+    sincronizando.current = true;
+    try {
+      const resposta = await fetch(`/api/rodadas/${id}`);
+      if (!resposta.ok) {
+        if (resposta.status === 404) setErroCarregar("rodada não encontrada");
+        return null;
+      }
+      const corpo: EstadoRodada = await resposta.json();
+      estadoRef.current = corpo;
+      setEstado(corpo);
+      return corpo;
+    } finally {
+      sincronizando.current = false;
     }
-    const corpo: EstadoRodada = await resposta.json();
-    setEstado(corpo);
-    return corpo;
   }, [id]);
 
-  useEffect(() => {
-    carregar();
-    mostradaEm.current = Date.now();
-  }, [carregar]);
+  const concluirRodadaEncerrada = useCallback(async () => {
+    if (finalizando.current) return;
+    finalizando.current = true;
+    await fetch(`/api/rodadas/${id}/encerrar`, { method: "POST" });
+    router.push(`/resultado/${id}`);
+  }, [id, router]);
 
-  // Sincroniza com o servidor a cada 5s: mantém o cronômetro fiel e é o
-  // único jeito de saber que o tempo acabou entre uma ação e outra.
   useEffect(() => {
-    const intervalo = setInterval(async () => {
-      const atual = await carregar();
-      if (atual?.encerrada && !finalizandoPorTempo.current) {
-        finalizandoPorTempo.current = true;
-        await fetch(`/api/rodadas/${id}/encerrar`, { method: "POST" });
-        router.push(`/resultado/${id}`);
-      }
-    }, 5000);
-    return () => clearInterval(intervalo);
-  }, [carregar, id, router]);
+    void carregar().then((atual) => {
+      if (atual?.encerrada) void concluirRodadaEncerrada();
+    });
+    mostradaEm.current = Date.now();
+  }, [carregar, concluirRodadaEncerrada]);
+
+  // Em prova ativa e visível, sincroniza com o relógio autoritativo do
+  // servidor. Prática não possui limite e evolui pelas respostas das ações.
+  useEffect(() => {
+    if (
+      estado?.modo !== "prova" ||
+      estado.status !== "em_andamento" ||
+      estado.encerrada ||
+      finalizando.current
+    ) {
+      return;
+    }
+
+    return iniciarPollingRodada({
+      obterEstado: () => (finalizando.current ? null : estadoRef.current),
+      sincronizar: carregar,
+      abaVisivel: () => document.visibilityState === "visible",
+      aoEncerrar: concluirRodadaEncerrada,
+    });
+  }, [carregar, concluirRodadaEncerrada, estado?.encerrada, estado?.modo, estado?.status]);
 
   async function enviarAcao(corpo: { resposta?: Letra; destino?: number }) {
     if (!estado || enviando) return;
@@ -134,16 +159,17 @@ export default function TelaRodada() {
       }
       const corpoResposta = await resposta.json();
       if (!resposta.ok) return;
-      setEstado((anterior) =>
-        anterior
-          ? {
-              ...anterior,
-              indiceAtual: corpoResposta.indiceAtual,
-              respostas: corpoResposta.respostas,
-              questaoAtual: corpoResposta.questaoAtual,
-            }
-          : anterior,
-      );
+      setEstado((anterior) => {
+        if (!anterior) return anterior;
+        const atualizado = {
+          ...anterior,
+          indiceAtual: corpoResposta.indiceAtual,
+          respostas: corpoResposta.respostas,
+          questaoAtual: corpoResposta.questaoAtual,
+        };
+        estadoRef.current = atualizado;
+        return atualizado;
+      });
       // Presente só quando acabou de responder no modo prática; ausente em
       // qualquer navegação (`destino`) ou no modo prova — o que limpa o
       // painel de feedback assim que o candidato sai da questão.
@@ -156,6 +182,7 @@ export default function TelaRodada() {
 
   async function finalizar() {
     if (!estado) return;
+    finalizando.current = true;
     const segundosGastos = (Date.now() - mostradaEm.current) / 1000;
     await fetch(`/api/rodadas/${id}/encerrar`, {
       method: "POST",

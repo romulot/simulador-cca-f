@@ -74,6 +74,7 @@ describe("GET /api/rodadas/:id", () => {
     expect(corpo.encerrada).toBe(false);
     expect(corpo.questaoAtual.posicao).toBe(0);
     expect(corpo.questaoAtual).not.toHaveProperty("correta");
+    expect(corpo.composicao).toEqual({ cotas: null, disponivel: null, deficit: null });
   });
 
   it("rodada de outro usuário devolve 404, igual a inexistente", async () => {

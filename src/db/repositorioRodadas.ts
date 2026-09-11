@@ -101,6 +101,53 @@ interface LinhaQuestaoRodada {
   segundos: number;
 }
 
+interface LinhaEstadoRodadaLeve {
+  id: number;
+  modo: Modo;
+  iniciada_em: string;
+  limite_segundos: number | null;
+  decorrido_segundos: number | null;
+  esgotou_tempo: boolean;
+  status: "em_andamento" | "finalizada";
+  indice_atual: number;
+  cotas_json: string | null;
+  disponivel_json: string | null;
+  deficit_json: string | null;
+  total_questoes: number;
+  respostas: Array<Letra | null>;
+}
+
+interface LinhaQuestaoAtual {
+  posicao: number;
+  origem: string;
+  dominio: number | null;
+  numero: number;
+  enunciado: string;
+  alternativas_json: string;
+}
+
+export interface EstadoRodadaLeve {
+  id: number;
+  modo: Modo;
+  iniciadaEm: Date;
+  limiteSegundos: number | null;
+  decorridoSegundos: number | null;
+  esgotouTempo: boolean;
+  status: "em_andamento" | "finalizada";
+  indiceAtual: number;
+  totalQuestoes: number;
+  respostas: Array<Letra | null>;
+  composicao: ComposicaoPersistida;
+  questaoAtual: {
+    posicao: number;
+    origem: string;
+    dominio: number | null;
+    numero: number;
+    enunciado: string;
+    alternativas: Record<Letra, string>;
+  } | null;
+}
+
 function linhaParaQuestao(linha: LinhaQuestaoRodada): Questao {
   return {
     origem: linha.origem,
@@ -264,6 +311,89 @@ export async function carregarRodada(
     },
     status: linhaRodada.status,
     iniciadaEm: new Date(linhaRodada.iniciada_em),
+  };
+}
+
+/** Leitura projetada para retomada e sincronização da tela de rodada.
+ *
+ * A primeira consulta transfere somente o estado leve da rodada e agrega
+ * as respostas necessárias à trilha. A segunda busca, por posição, apenas
+ * a questão atualmente exibida. Nenhum texto das demais questões cruza a
+ * conexão com o banco.
+ */
+export async function carregarEstadoRodadaLeve(
+  pool: Pool,
+  id: number,
+  userId: number,
+): Promise<EstadoRodadaLeve | null> {
+  const resultadoRodada = await pool.query<LinhaEstadoRodadaLeve>(
+    `SELECT r.id,
+            r.modo,
+            r.iniciada_em,
+            r.limite_segundos,
+            r.decorrido_segundos,
+            r.esgotou_tempo,
+            r.status,
+            r.indice_atual,
+            r.cotas_json,
+            r.disponivel_json,
+            r.deficit_json,
+            (SELECT COUNT(*)::integer
+               FROM questoes_rodada qr
+              WHERE qr.rodada_id = r.id) AS total_questoes,
+            ARRAY(SELECT qr.resposta
+                    FROM questoes_rodada qr
+                   WHERE qr.rodada_id = r.id
+                   ORDER BY qr.posicao ASC) AS respostas
+       FROM rodadas r
+      WHERE r.id = $1 AND r.user_id = $2`,
+    [id, userId],
+  );
+  const rodada = resultadoRodada.rows[0];
+  if (!rodada) return null;
+
+  const resultadoQuestao = await pool.query<LinhaQuestaoAtual>(
+    `SELECT qr.posicao,
+            qr.origem,
+            qr.dominio,
+            qr.numero,
+            qr.enunciado,
+            qr.alternativas_json
+       FROM questoes_rodada qr
+       JOIN rodadas r ON r.id = qr.rodada_id
+      WHERE qr.rodada_id = $1
+        AND qr.posicao = $2
+        AND r.user_id = $3`,
+    [id, rodada.indice_atual, userId],
+  );
+  const questao = resultadoQuestao.rows[0];
+
+  return {
+    id: rodada.id,
+    modo: rodada.modo,
+    iniciadaEm: new Date(rodada.iniciada_em),
+    limiteSegundos: rodada.limite_segundos,
+    decorridoSegundos: rodada.decorrido_segundos,
+    esgotouTempo: rodada.esgotou_tempo,
+    status: rodada.status,
+    indiceAtual: rodada.indice_atual,
+    totalQuestoes: rodada.total_questoes,
+    respostas: rodada.respostas,
+    composicao: {
+      cotas: rodada.cotas_json ? JSON.parse(rodada.cotas_json) : null,
+      disponivel: rodada.disponivel_json ? JSON.parse(rodada.disponivel_json) : null,
+      deficit: rodada.deficit_json ? JSON.parse(rodada.deficit_json) : null,
+    },
+    questaoAtual: questao
+      ? {
+          posicao: questao.posicao,
+          origem: questao.origem,
+          dominio: questao.dominio,
+          numero: questao.numero,
+          enunciado: questao.enunciado,
+          alternativas: JSON.parse(questao.alternativas_json),
+        }
+      : null,
   };
 }
 

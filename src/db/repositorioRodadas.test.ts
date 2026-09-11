@@ -1,10 +1,10 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Pool } from "pg";
 
 import type { Questao } from "@/lib/parser/tipos";
 import { criarRodada as criarEstado, encerrar, iniciar, responder, type Relogio } from "@/domain/rodada";
 import { poolTeste, criarUsuarioTeste } from "./apoioTeste";
-import { arquivarTodasRodadas, carregarRodada, criarRodada, deletarTodasRodadas, salvarRodada } from "./repositorioRodadas";
+import { arquivarTodasRodadas, carregarEstadoRodadaLeve, carregarRodada, criarRodada, deletarTodasRodadas, salvarRodada } from "./repositorioRodadas";
 
 function questaoFake(numero: number, correta: "A" | "B" | "C" | "D" = "A", dominio: number | null = 1): Questao {
   return {
@@ -98,6 +98,95 @@ describe("repositorioRodadas", () => {
   it("carregarRodada devolve null quando a rodada pertence a outro usuário", async () => {
     const id = await criarRodada(pool, { userId, questoes: [questaoFake(1)], modo: "pratica", limiteSegundos: null });
     expect(await carregarRodada(pool, id, outroUsuarioId)).toBeNull();
+  });
+
+  describe("carregarEstadoRodadaLeve", () => {
+    it("carrega respostas e somente a questão da posição atual", async () => {
+      const id = await criarRodada(pool, {
+        userId,
+        questoes: [questaoFake(1), questaoFake(2)],
+        modo: "prova",
+        limiteSegundos: 7200,
+      });
+      await pool.query(
+        "UPDATE rodadas SET indice_atual = 1 WHERE id = $1 AND user_id = $2",
+        [id, userId],
+      );
+
+      const estado = await carregarEstadoRodadaLeve(pool, id, userId);
+
+      expect(estado).toMatchObject({
+        id,
+        modo: "prova",
+        status: "em_andamento",
+        indiceAtual: 1,
+        totalQuestoes: 2,
+        respostas: [null, null],
+      });
+      expect(estado?.questaoAtual).toMatchObject({ posicao: 1, numero: 2, enunciado: "Enunciado 2" });
+      expect(estado?.questaoAtual).not.toHaveProperty("correta");
+      expect(estado?.questaoAtual).not.toHaveProperty("explicacoes");
+    });
+
+    it("preserva isolamento por user_id", async () => {
+      const id = await criarRodada(pool, {
+        userId,
+        questoes: [questaoFake(1)],
+        modo: "prova",
+        limiteSegundos: 7200,
+      });
+
+      expect(await carregarEstadoRodadaLeve(pool, id, outroUsuarioId)).toBeNull();
+    });
+
+    it("usa colunas explícitas e filtra a consulta pesada pela posição atual", async () => {
+      const query = vi
+        .fn()
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 7,
+              modo: "prova",
+              iniciada_em: "2026-09-04T10:00:00.000Z",
+              limite_segundos: 7200,
+              decorrido_segundos: null,
+              esgotou_tempo: false,
+              status: "em_andamento",
+              indice_atual: 3,
+              cotas_json: '{"1":16}',
+              disponivel_json: '{"1":54}',
+              deficit_json: null,
+              total_questoes: 60,
+              respostas: Array(60).fill(null),
+            },
+          ],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              posicao: 3,
+              origem: "teste_origem",
+              dominio: 1,
+              numero: 4,
+              enunciado: "Enunciado 4",
+              alternativas_json: '{"A":"a","B":"b","C":"c","D":"d"}',
+            },
+          ],
+        });
+      const poolSimulado = { query } as unknown as Pool;
+
+      await carregarEstadoRodadaLeve(poolSimulado, 7, 11);
+
+      expect(query).toHaveBeenCalledTimes(2);
+      const sqlEstado = String(query.mock.calls[0][0]);
+      const sqlQuestao = String(query.mock.calls[1][0]);
+      expect(`${sqlEstado}\n${sqlQuestao}`).not.toMatch(/SELECT\s+\*/i);
+      expect(sqlQuestao).toContain("qr.posicao = $2");
+      expect(sqlQuestao).toContain("r.user_id = $3");
+      expect(query.mock.calls[1][1]).toEqual([7, 3, 11]);
+      expect(sqlQuestao).not.toContain("qr.correta");
+      expect(sqlQuestao).not.toContain("qr.explicacoes_json");
+    });
   });
 
   it("salvarRodada persiste respostas/tempos/indice de uma rodada ainda em andamento", async () => {

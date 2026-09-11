@@ -11,10 +11,8 @@
 import { NextResponse } from "next/server";
 
 import { obterConexao } from "@/db/conexao";
-import { carregarRodada } from "@/db/repositorioRodadas";
+import { carregarEstadoRodadaLeve } from "@/db/repositorioRodadas";
 import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
-import { atual, decorrido, encerrada, relogioPadrao, restante } from "@/domain/rodada";
-import { paraQuestaoCliente } from "@/lib/api/questaoCliente";
 
 function erro(status: number, mensagem: string) {
   return NextResponse.json({ erro: mensagem }, { status });
@@ -36,27 +34,36 @@ export async function GET(
   }
 
   const db = await obterConexao();
-  const persistida = await carregarRodada(db, id, userId);
+  const persistida = await carregarEstadoRodadaLeve(db, id, userId);
   if (!persistida) {
     return erro(404, "rodada não encontrada");
   }
 
-  const relogio = relogioPadrao();
-  const { estado } = persistida;
-  const questaoAtual = atual(estado, relogio);
+  const decorridoSegundos =
+    persistida.status === "finalizada"
+      ? (persistida.decorridoSegundos ?? 0)
+      : Math.max(0, Date.now() / 1000 - persistida.iniciadaEm.getTime() / 1000);
+  const restanteSegundos =
+    persistida.limiteSegundos === null
+      ? null
+      : Math.max(0, persistida.limiteSegundos - decorridoSegundos);
+  const estaEncerrada =
+    persistida.totalQuestoes === 0 ||
+    persistida.status === "finalizada" ||
+    (persistida.limiteSegundos !== null && decorridoSegundos >= persistida.limiteSegundos);
 
   return NextResponse.json({
     rodadaId: id,
-    modo: estado.modo,
+    modo: persistida.modo,
     status: persistida.status,
-    totalQuestoes: estado.questoes.length,
-    limiteSegundos: estado.limiteSegundos,
-    restanteSegundos: restante(estado, relogio),
-    decorridoSegundos: decorrido(estado, relogio),
-    indiceAtual: estado.indice,
-    respostas: estado.respostas,
-    encerrada: encerrada(estado, relogio),
-    questaoAtual: questaoAtual ? paraQuestaoCliente(questaoAtual, estado.indice) : null,
+    totalQuestoes: persistida.totalQuestoes,
+    limiteSegundos: persistida.limiteSegundos,
+    restanteSegundos,
+    decorridoSegundos,
+    indiceAtual: persistida.indiceAtual,
+    respostas: persistida.respostas,
+    encerrada: estaEncerrada,
+    questaoAtual: estaEncerrada ? null : persistida.questaoAtual,
     composicao: persistida.composicao,
   });
 }
