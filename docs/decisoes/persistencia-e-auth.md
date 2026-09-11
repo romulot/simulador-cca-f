@@ -1,18 +1,18 @@
-# Decisões — persistência (Neon) e autenticação
+# Decisões — persistência (Supabase Postgres) e autenticação
 
-Registrado antes da implementação, conforme plano de migração Vercel+Neon+login.
+Atualizado após a migração do banco para Supabase Postgres.
 
-## Driver Postgres: `pg` (node-postgres), não `@neondatabase/serverless`
+## Driver Postgres: `pg` (node-postgres)
 
-O driver serverless da Neon (HTTP/WebSocket) evita gerenciar pool manualmente,
-mas só fala o protocolo da Neon — não conecta a um Postgres local qualquer,
-o que tornaria impossível testar a camada de dados sem uma conta Neon real.
+`pg` é compatível com o protocolo de fio do Postgres: funciona contra o
+Postgres local usado em dev/test e contra o Supabase. Em produção,
+`DATABASE_URL` aponta para o **Shared Transaction Pooler** na porta `6543`,
+adequado ao runtime serverless. Migrations são executadas fora do runtime por
+`npm run db:migrate`, usando exclusivamente `MIGRATION_DATABASE_URL` com
+Session Pooler/Direct na porta `5432`.
 
-`pg` é 100% compatível com o protocolo de fio do Postgres: funciona igual
-contra um Postgres local (usado neste projeto para dev/test) e contra a
-Neon. Em produção, `DATABASE_URL` deve apontar para o **endpoint com pooler**
-da Neon (host com sufixo `-pooler`) — isso resolve o problema de limite de
-conexões simultâneas em função serverless sem trocar de biblioteca.
+O runtime apenas cria ou reutiliza seu pool; não consulta `schema_migrations`
+nem executa DDL automaticamente.
 
 ## Sessão: cookie assinado próprio (sem tabela de sessão, sem Auth.js)
 

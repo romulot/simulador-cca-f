@@ -1,6 +1,6 @@
 # Simulador CCA-F
 
-Simulador de provas para a certificação **Claude Architect Foundation (CCA-F)** — aplicação web com login (email + senha), publicada em **Vercel** com banco de dados **Neon (Postgres)**. Cada conta tem seu próprio histórico de rodadas, isolado das demais.
+Simulador de provas para a certificação **Claude Architect Foundation (CCA-F)** — aplicação web com login (email + senha), publicada em **Vercel** com banco de dados **Supabase Postgres**. Cada conta tem seu próprio histórico de rodadas, isolado das demais.
 
 Migrado de um simulador em TUI (terminal) para uma aplicação web em Next.js, preservando as regras de negócio originais (sorteio ponderado do modo prova, navegação sem wraparound, tempo por questão, dois denominadores de placar) e adicionando relatórios por nível cognitivo (Bloom) e por dificuldade, que a versão em terminal não tinha.
 
@@ -14,19 +14,25 @@ Migrado de um simulador em TUI (terminal) para uma aplicação web em Next.js, p
 
 O relatório nunca converte a taxa bruta de acerto para a escala oficial da prova (720/1000) — só cita a referência, já que a certificação não publica essa conversão.
 
-## Publicar (Vercel + Neon)
+## Publicar (Vercel + Supabase)
 
-1. Crie um projeto em [neon.tech](https://neon.tech) (free tier) e copie a **connection string com pooler** (host termina em `-pooler`) — é ela que deve virar `DATABASE_URL`, não a conexão direta, para não estourar o limite de conexões simultâneas em função serverless.
+1. No projeto Supabase, obtenha a conexão do **Shared Transaction Pooler** na porta `6543` para o runtime e uma conexão administrativa via **Session Pooler/Direct** na porta `5432` para migrations.
 2. Importe o repositório em [vercel.com](https://vercel.com) (detecta Next.js automaticamente, sem configuração de build extra).
 3. Crie uma chave na Resend e valide o domínio que enviará os e-mails de recuperação.
 4. Nas variáveis de ambiente do projeto na Vercel (Production **e** Preview), configure:
-   - `DATABASE_URL` — a connection string do passo 1.
+   - `DATABASE_URL` — conexão de runtime do Shared Transaction Pooler (`:6543`).
    - `SESSION_SECRET` — uma string aleatória longa (ex.: `openssl rand -base64 32`), usada para assinar o cookie de sessão.
    - `APP_URL` — origem pública da aplicação, sem barra final (ex.: `https://simulador.exemplo`).
    - `RESEND_API_KEY` — chave privada da API da Resend.
    - `EMAIL_FROM` — remetente validado (ex.: `Simulador CCA-F <acesso@exemplo.com>`).
-5. Faça o deploy. Na primeira requisição que tocar o banco, as migrations pendentes são aplicadas e registradas em `schema_migrations`.
-6. Acesse a URL pública, cadastre a primeira conta e valide também a entrega do e-mail de recuperação.
+5. Antes do deploy, execute as migrations separadamente em um ambiente administrativo, sem expor a variável ao runtime:
+
+   ```bash
+   MIGRATION_DATABASE_URL="postgres://...:5432/..." npm run db:migrate
+   ```
+
+   O comando registra as migrations em `schema_migrations`. Requisições da aplicação nunca executam migrations ou DDL.
+6. Faça o deploy, acesse a URL pública, cadastre a primeira conta e valide também a entrega do e-mail de recuperação.
 
 Decisões de arquitetura e trade-offs aceitos (driver Postgres, esquema de sessão, hash de senha, escopo do que ficou de fora) estão em [`docs/decisoes/persistencia-e-auth.md`](docs/decisoes/persistencia-e-auth.md).
 
@@ -34,7 +40,7 @@ Decisões de arquitetura e trade-offs aceitos (driver Postgres, esquema de sess�
 
 - **Sem "sair de todos os dispositivos"** — a sessão é um cookie assinado sem estado no banco; ela expira sozinha (30 dias), mas não há como revogá-la antes disso.
 - O rate limiting atual é local a cada processo. Ele reduz abuso casual, mas não substitui um limitador distribuído na borda para uma implantação com várias instâncias.
-- Planos gratuitos de Vercel e Neon têm limites de uso e comportamento de "dormir" após inatividade (cold start) — não fazem parte deste repositório, consulte a documentação atual de cada provedor antes de decidir se atendem seu uso.
+- Planos gratuitos de Vercel e Supabase têm limites de uso e comportamento de "dormir" após inatividade (cold start) — não fazem parte deste repositório, consulte a documentação atual de cada provedor antes de decidir se atendem seu uso.
 
 ## Adicionar ou editar conteúdo (novos simulados)
 
@@ -61,11 +67,13 @@ Depois:
 
 ```bash
 export DATABASE_URL="postgres://postgres:simulador@localhost:5433/simulador"
+export MIGRATION_DATABASE_URL="postgres://postgres:simulador@localhost:5433/simulador"
 export SESSION_SECRET="qualquer-string-para-desenvolvimento-local"
 export APP_URL="http://localhost:3000"
 export RESEND_API_KEY="re_..."
 export EMAIL_FROM="Simulador CCA-F <acesso@seu-dominio.com>"
 
+npm run db:migrate # aplica migrations explicitamente usando MIGRATION_DATABASE_URL
 yarn dev          # servidor de desenvolvimento em http://localhost:3000
 yarn lint         # ESLint (inclui regras recomendadas do Next.js e TypeScript)
 yarn typecheck    # verificação explícita de tipos, sem gerar arquivos
@@ -96,7 +104,8 @@ e2e/                      teste de fluxo completo (Playwright)
 
 | Variável | Uso |
 |---|---|
-| `DATABASE_URL` | Connection string do Postgres (Neon com pooler em produção; Postgres local em dev/test). Obrigatória. |
+| `DATABASE_URL` | Conexão de runtime: Supabase Shared Transaction Pooler na porta `6543` em produção; Postgres local em dev/test. Obrigatória. |
+| `MIGRATION_DATABASE_URL` | Conexão administrativa: Supabase Session Pooler/Direct na porta `5432`. Exigida apenas por `npm run db:migrate`; não deve ser disponibilizada ao runtime. |
 | `SESSION_SECRET` | Chave usada para assinar o cookie de sessão (HMAC-SHA256). Obrigatória. |
 | `APP_URL` | Origem pública usada para montar links de recuperação. Obrigatória para recuperação. |
 | `RESEND_API_KEY` | Chave de API para envio dos e-mails. Obrigatória para recuperação. |
