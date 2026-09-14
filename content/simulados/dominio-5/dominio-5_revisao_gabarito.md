@@ -25,6 +25,7 @@ O que se perdeu não foi volume, foi **um tipo de conteúdo**: valores, versões
 - Rubrica: 6 = Bloom 3 + integração 0 + cenário 1 + distratores 2
 - Cenário: S2 — Code Generation with Claude Code
 - Princípio testado: causa raiz > sintoma — bloco determinístico fora do histórico sumarizado, não instrução ao sumarizador
+- Arquétipos: A=probabilistico-vs-garantia, B=camada-alvo-errado, D=over-engineering
 
 ## Q2 — Resposta correta: **B** · (5.2)
 
@@ -43,6 +44,7 @@ Os três gatilhos já estão escritos, e mesmo assim o desk afoga: os três grup
 - Rubrica: 8 = Bloom 3 + integração 1 + cenário 2 + distratores 2
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: causa raiz > sintoma — as três negativas são metade do critério; gate de escalação precisaria do rótulo que não existe
+- Arquétipos: A=over-engineering, C=sinal-nao-confiavel, D=over-engineering
 
 ## Q3 — Resposta correta: **D** · (5.3)
 
@@ -61,6 +63,7 @@ O time consertou um anti-padrão do K4 e caiu no oposto. `status` com dois valor
 - Rubrica: 9 = Bloom 4 + integração 1 + cenário 2 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: casar a ferramenta ao requisito — o contrato precisa separar vazio válido de falha de acesso, nas duas direções
+- Arquétipos: A=vazio-ausente, B=vazio-ausente, C=over-engineering
 
 ## Q4 — Resposta correta: **A** · (5.4)
 
@@ -79,6 +82,7 @@ O scratchpad tem **duas metades** — manter o arquivo **e** referenciá-lo nas 
 - Rubrica: 7 = Bloom 3 + integração 1 + cenário 1 + distratores 2
 - Cenário: S2 — Code Generation with Claude Code
 - Princípio testado: causa raiz > sintoma — reinjeção seletiva é a segunda metade do skill; subagente não herda contexto
+- Arquétipos: B=probabilistico-vs-garantia, C=camada-alvo-errado, D=camada-alvo-errado
 
 ## Q5 — Resposta correta: **C** · (5.5)
 
@@ -97,6 +101,7 @@ Aritmética de agregação, não amostragem: o número semanal é uma **média p
 - Rubrica: 7 = Bloom 3 + integração 1 + cenário 2 + distratores 1
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: causa raiz > sintoma — o agregado dilui o segmento pequeno pelo peso dele; mede-se por célula, com o `n` ao lado
+- Arquétipos: A=camada-alvo-errado, B=camada-alvo-errado, D=sinal-nao-confiavel
 
 ## Q6 — Resposta correta: **B** · (5.6)
 
@@ -115,6 +120,7 @@ O S1 já está cumprido **na origem** — os registros do subagente estão 100% 
 - Rubrica: 6 = Bloom 3 + integração 0 + cenário 1 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: causa raiz > sintoma — o vínculo afirmação→fonte tem de ser campo do contrato de saída da síntese, não bibliografia nem instrução
+- Arquétipos: A=probabilistico-vs-garantia, C=montante-jusante, D=camada-alvo-errado
 
 ## Q7 — Resposta correta: **D** · (5.2)
 
@@ -133,6 +139,7 @@ Quebra-automatismo do domínio: depois de treinar "na dúvida, escale", este ite
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: resposta proporcional — múltiplos matches pedem identificador adicional; escalar é para a ambiguidade que a pergunta não resolve
+- Arquétipos: A=camada-alvo-errado, B=sinal-nao-confiavel, C=camada-alvo-errado
 
 ## Q8 — Resposta correta: **A** · (5.6)
 
@@ -151,6 +158,7 @@ O enunciado já entrega a metade contra-intuitiva, e quase todo mundo lê por ci
 - Rubrica: 7 = Bloom 3 + integração 1 + cenário 1 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: casar a ferramenta ao requisito — cada tipo de conteúdo na forma que ele pede; o achatamento uniforme preserva os campos e destrói o alinhamento
+- Arquétipos: B=camada-alvo-errado, C=probabilistico-vs-garantia, D=over-engineering
 
 ## Q9 — Resposta correta: **B** · (cruza 5.6 + 5.5)
 
@@ -169,6 +177,7 @@ O mesmo sintoma — dois valores candidatos para um campo — tem **dois desfech
 - Rubrica: 10 = Bloom 4 + integração 2 + cenário 2 + distratores 2
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: casar a ferramenta ao requisito — a pergunta é se a procedência separa os valores; se separa, anota-se; se não, é revisão humana
+- Arquétipos: A=camada-alvo-errado, C=sinal-nao-confiavel, D=vazio-ausente
 - Task statements combinados: 5.6 (conflito entre fontes credíveis, resolvido por procedência) + 5.5 (conflito interno a um documento ⇒ roteamento para revisão humana)
 
 ## Q10 — Resposta correta: **D** · (cruza 5.6 + 5.3)
@@ -188,6 +197,7 @@ O erro de camada mais provável do domínio: os dois envelopes existem para cois
 - Rubrica: 10 = Bloom 4 + integração 2 + cenário 2 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: causa raiz > sintoma — o envelope de falha e o de procedência são contratos distintos; divergência entre sucessos não é erro
+- Arquétipos: A=camada-alvo-errado, B=montante-jusante, C=camada-alvo-errado
 - Task statements combinados: 5.3 (envelope de erro estruturado para recuperação) + 5.6 (envelope de procedência no caminho de sucesso, para reconciliação)
 
 ## Q11 — Resposta correta: **B** · (cruza 5.4 + 5.1)
@@ -207,6 +217,7 @@ São **dois problemas de camadas diferentes**, e só uma alternativa ataca os do
 - Rubrica: 10 = Bloom 4 + integração 2 + cenário 2 + distratores 2
 - Cenário: S2 — Code Generation with Claude Code
 - Princípio testado: causa raiz > sintoma — `--resume` restaura a conversa; manifesto preserva o trabalho e bloco determinístico preserva o critério
+- Arquétipos: A=camada-alvo-errado, C=camada-alvo-errado, D=probabilistico-vs-garantia
 - Task statements combinados: 5.4 (export de estado + manifesto para recuperação de crash) + 5.1 (bloco determinístico fora do histórico sumarizado)
 
 ## Q12 — Resposta correta: **C** · (cruza 5.2 + 5.5)
@@ -226,6 +237,7 @@ Os dois mecanismos decidem coisas **diferentes**, e a calibração medida autori
 - Rubrica: 10 = Bloom 4 + integração 2 + cenário 2 + distratores 2
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: casar a ferramenta ao requisito — critério explícito decide escalação; limiar calibrado contra rótulo decide só o que foi medido
+- Arquétipos: A=sinal-nao-confiavel, B=camada-alvo-errado, D=over-engineering
 - Task statements combinados: 5.2 (gatilhos de escalação como critério explícito) + 5.5 (limiar por calibração medida contra conjunto rotulado, validada por segmento)
 
 ---

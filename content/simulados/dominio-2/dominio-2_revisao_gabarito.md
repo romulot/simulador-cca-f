@@ -21,6 +21,7 @@ A `description` (não o nome da função Python, não o system prompt) é o sina
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: descrições de ferramenta como seletor primário do LLM
+- Arquétipos: A=camada-alvo-errado, C=probabilistico-vs-garantia, D=camada-alvo-errado
 
 ## Q2 — Resposta correta: **A** · (2.4)
 
@@ -39,6 +40,7 @@ Variável obrigatória sem `:-default` ausente no ambiente faz o **parse do conf
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: causa raiz > sintoma
+- Arquétipos: B=feature-inexistente-verossimil, C=feature-inexistente-verossimil, D=camada-alvo-errado
 
 ## Q3 — Resposta correta: **C** · (2.2)
 
@@ -57,6 +59,7 @@ O mesmo payload malformado é reenviado sem mudança — isso é erro de **input
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: categorização correta do erro estruturado (validation ≠ transient) orienta a decisão de retry
+- Arquétipos: A=camada-alvo-errado
 
 ## Q4 — Resposta correta: **D** · (2.5)
 
@@ -75,6 +78,7 @@ Busca de **conteúdo** em muitos arquivos é o trabalho do Grep (ripgrep): saíd
 - Rubrica: 4 = Bloom 2 + integração 0 + cenário 1 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: casar a ferramenta ao requisito (busca de conteúdo → Grep, não Read/Bash)
+- Arquétipos: A=camada-alvo-errado, B=camada-alvo-errado, C=over-engineering
 
 ## Q5 — Resposta correta: **C** · (2.3)
 
@@ -93,6 +97,7 @@ Quebra-automatismo: aqui **forçar `tool_choice`** é de fato a resposta certa �
 - Rubrica: 4 = Bloom 2 + integração 0 + cenário 1 + distratores 1
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: `tool_choice` forçado garante sequenciamento determinístico do primeiro passo, sem exigir enforcement por prompt
+- Arquétipos: A=probabilistico-vs-garantia, B=camada-alvo-errado, D=over-engineering
 
 ## Q6 — Resposta correta: **D** · (2.1)
 
@@ -111,6 +116,7 @@ O exemplo trabalhado faz parte do sinal de seleção tanto quanto a prosa da `de
 - Rubrica: 7 = Bloom 4 + integração 0 + cenário 1 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: consistência interna da descrição (exemplo alinhado ao propósito declarado) como sinal de seleção
+- Arquétipos: B=camada-alvo-errado, C=probabilistico-vs-garantia
 
 ## Q7 — Resposta correta: **C** · (2.4)
 
@@ -129,6 +135,7 @@ Scope `local` é pessoal/não-versionado e vence `project` **sem merge de campos
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: precedência de scope `local > project > user` sem merge de campos — usa-se a entry inteira do scope vencedor
+- Arquétipos: A=camada-alvo-errado, B=feature-inexistente-verossimil, D=feature-inexistente-verossimil
 
 ## Q8 — Resposta correta: **B** · (2.2)
 
@@ -147,6 +154,7 @@ Mesma tool, duas causas reais diferentes: o 503 é recuperável com retry (trans
 - Rubrica: 7 = Bloom 4 + integração 0 + cenário 1 + distratores 2
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: categorização correta do erro estruturado guia retry local vs propagação/mensagem ao cliente
+- Arquétipos: A=camada-alvo-errado, D=sinal-nao-confiavel
 
 ## Q9 — Resposta correta: **D** · (cruza 2.1 + 2.3)
 
@@ -165,6 +173,7 @@ Mesma tool, duas causas reais diferentes: o 503 é recuperável com retry (trans
 - Rubrica: 9 = Bloom 4 + integração 1 + cenário 2 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: descrições de ferramenta como seletor primário — `tool_choice` forçado serve para sequenciar um passo, não para desambiguar entre múltiplas formas de pedido no mesmo run
+- Arquétipos: A=probabilistico-vs-garantia, B=over-engineering, C=camada-alvo-errado
 - Task statements combinados: 2.1 (descrições) + 2.3 (mecânica de `tool_choice` forçado)
 
 ## Q10 — Resposta correta: **A** · (cruza 2.2 + 2.4)
@@ -184,6 +193,7 @@ A causa é uma regra de negócio do servidor (freeze de release), não um proble
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S4 — Developer Productivity
 - Princípio testado: causa raiz > sintoma — a categoria do erro estruturado (business, não-retryable) deve refletir a causa real, e re-configurar scope não substitui isso
+- Arquétipos: B=camada-alvo-errado, C=probabilistico-vs-garantia, D=camada-alvo-errado
 - Task statements combinados: 2.2 (erro estruturado propagado) + 2.4 (precedência de scope não é a alavanca para uma política do servidor)
 
 ## Q11 — Resposta correta: **B** · (cruza 2.3 + 2.5)
@@ -203,6 +213,7 @@ Least privilege aplica-se igualmente a built-ins e a tools MCP customizadas: Bas
 - Rubrica: 7 = Bloom 4 + integração 1 + cenário 1 + distratores 1
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: least privilege / ferramentas escopadas — `allowed_tools` escopa built-ins e tools MCP customizadas pelo mesmo princípio
+- Arquétipos: A=camada-alvo-errado, C=probabilistico-vs-garantia, D=over-engineering
 - Task statements combinados: 2.3 (escopo de tools por papel) + 2.5 (julgamento de built-in: Bash para execução, não para busca)
 
 ## Q12 — Resposta correta: **A** · (cruza 2.1 + 2.4)
@@ -222,6 +233,7 @@ O prefixo `mcp__<server>__` existe para roteamento/execução (de qual servidor 
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: descrições de ferramenta como seletor primário do LLM — o namespace `mcp__server__tool` não substitui uma descrição diferenciada
+- Arquétipos: B=camada-alvo-errado, C=camada-alvo-errado, D=probabilistico-vs-garantia
 - Task statements combinados: 2.1 (descrição como seletor) + 2.4 (namespacing/registro de tools MCP)
 
 ---

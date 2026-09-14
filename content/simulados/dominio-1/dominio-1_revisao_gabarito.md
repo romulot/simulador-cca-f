@@ -23,6 +23,7 @@ O "quem roda o loop" é a distinção-chave: no Agent SDK, `query()` **já** exe
 - Rubrica: 7 = Bloom 4 + integração 0 + cenário 1 + distratores 2
 - Cenário: S4 — Developer Productivity
 - Princípio testado: causa raiz > sintoma (remover a duplicidade de orquestração na origem, não mascará-la com uma camada extra)
+- Arquétipos: B=camada-alvo-errado, C=over-engineering, D=camada-alvo-errado
 
 ## Q2 — Resposta correta: **B** · (1.2)
 
@@ -41,6 +42,7 @@ A seleção dinâmica de subagentes feita **uma única vez, no intake**, não é
 - Rubrica: 6 = Bloom 4 + integração 0 + cenário 1 + distratores 1
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: decomposição dinâmica quando o escopo muda em runtime (o coordenador redelega, não substitui a seleção inicial por um roteiro fixo)
+- Arquétipos: A=extremo-vs-meio, C=camada-alvo-errado, D=sinal-nao-confiavel
 
 ## Q3 — Resposta correta: **C** · (1.3)
 
@@ -59,6 +61,7 @@ O pilar do 1.3: o **único canal pai→filho é a string do prompt**. Referencia
 - Rubrica: 7 = Bloom 4 + integração 0 + cenário 1 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: contexto isolado exige conteúdo explícito no prompt, não referências que só o coordenador consegue resolver
+- Arquétipos: A=camada-alvo-errado, B=feature-inexistente-verossimil, D=over-engineering
 
 ## Q4 — Resposta correta: **C** · (1.4)
 
@@ -77,6 +80,7 @@ O requisito é garantia determinística independente do julgamento do modelo sob
 - Rubrica: 3 = Bloom 2 + integração 0 + cenário 0 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: enforcement programático (hook/gate) > prompt quando o requisito exige garantia determinística
+- Arquétipos: A=probabilistico-vs-garantia, B=over-engineering, D=camada-alvo-errado
 
 ## Q5 — Resposta correta: **A** · (1.5)
 
@@ -95,6 +99,7 @@ A causa raiz não é o mecanismo de normalização em si — é o **escopo do ma
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: causa raiz > sintoma (o matcher mal escopado é a causa; normalização em si estava correta)
+- Arquétipos: B=camada-alvo-errado, C=over-engineering, D=probabilistico-vs-garantia
 
 ## Q6 — Resposta correta: **C** · (1.6) — *quebra do automatismo (parcial)*
 
@@ -113,6 +118,7 @@ A resposta certa é híbrida, e por isso mais difícil: nem manter tudo fixo, ne
 - Rubrica: 8 = Bloom 4 + integração 0 + cenário 2 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: casar a estratégia de decomposição à forma real do trabalho (fixo para o previsível, dinâmico só para o subconjunto que de fato exige exploração)
+- Arquétipos: A=sinal-nao-confiavel, B=over-engineering, D=vazio-ausente
 
 ## Q7 — Resposta correta: **B** · (1.7)
 
@@ -131,6 +137,7 @@ Uma vez criado, um fork é uma sessão como qualquer outra: tem seu próprio id 
 - Rubrica: 4 = Bloom 3 + integração 0 + cenário 0 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: fork cria um branch independente com id próprio; resumir esse branch pelo seu id não re-forka nem afeta o original
+- Arquétipos: A=feature-inexistente-verossimil, C=feature-inexistente-verossimil, D=feature-inexistente-verossimil
 
 ## Q8 — Resposta correta: **D** · (1.4)
 
@@ -149,6 +156,7 @@ O handoff para um humano que não vê o transcript completo deve trazer campos f
 - Rubrica: 3 = Bloom 2 + integração 0 + cenário 1 + distratores 0
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: handoff estruturado (campos fixos) > texto livre ou transcript bruto para quem não vê o histórico completo
+- Arquétipos: A=sinal-nao-confiavel, B=camada-alvo-errado, C=sinal-nao-confiavel
 
 ## Q9 — Resposta correta: **A** · (1.1 + 1.3) — *cruzada*
 
@@ -167,6 +175,7 @@ Cruza o contrato do loop (1.1) com o mecanismo de spawn via `Task` (1.3): o reto
 - Rubrica: 9 = Bloom 4 + integração 1 + cenário 2 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: causa raiz > sintoma — o contrato `tool_result`/`tool_use_id` governa tanto o loop (1.1) quanto o retorno do spawn (1.3)
+- Arquétipos: B=camada-alvo-errado, C=probabilistico-vs-garantia, D=camada-alvo-errado
 - **Task statements combinados:** 1.1 (contrato `stop_reason`/término do loop) + 1.3 (mecanismo de retorno de um spawn via `Task`)
 
 ## Q10 — Resposta correta: **B** · (1.4 + 1.5) — *cruzada*
@@ -186,6 +195,7 @@ Cruza enforcement (1.4) com normalização (1.5): são dois hooks, em dois está
 - Rubrica: 9 = Bloom 4 + integração 1 + cenário 2 + distratores 2
 - Cenário: S1 — Customer Support Resolution Agent
 - Princípio testado: casar o mecanismo ao requisito — gate de política em `PreToolUse`, normalização de resultado em `PostToolUse`; não fundir os dois estágios
+- Arquétipos: A=camada-alvo-errado, C=probabilistico-vs-garantia, D=over-engineering
 - **Task statements combinados:** 1.4 (gate de aprovação já correto, não deve mudar) + 1.5 (normalização de saída heterogênea via `PostToolUse`)
 
 ## Q11 — Resposta correta: **D** · (1.2 + 1.6) — *cruzada*
@@ -205,6 +215,7 @@ Cruza decomposição (1.6) com o papel do coordenador (1.2), mas por um mecanism
 - Rubrica: 9 = Bloom 4 + integração 1 + cenário 2 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: casar o eixo de decomposição à forma real da pergunta (1.6) — o coordenador (1.2) detém a decisão de reescolher esse eixo, não apenas inspecionar achados pós-fan-out em busca de lacunas
+- Arquétipos: A=camada-alvo-errado, B=camada-alvo-errado, C=camada-alvo-errado
 - **Task statements combinados:** 1.2 (coordenador decide e reemite o eixo de decomposição) + 1.6 (eixo de decomposição errado — por fonte — quando a pergunta exige comparação por segmento)
 
 ## Q12 — Resposta correta: **B** · (1.3 + 1.7) — *cruzada*
@@ -224,6 +235,7 @@ Cruza fork de sessão (1.7) com spawn/contexto isolado de subagentes (1.3). O is
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S3 — Multi-Agent Research System
 - Princípio testado: `fork_session` isola o branch da conversa; dentro de cada branch, o isolamento de contexto entre subagentes (1.3) continua valendo normalmente
+- Arquétipos: A=camada-alvo-errado, C=feature-inexistente-verossimil, D=feature-inexistente-verossimil
 - **Task statements combinados:** 1.3 (spawn e contexto isolado entre subagentes) + 1.7 (`fork_session` para isolar branches paralelos de uma mesma baseline)
 
 ---

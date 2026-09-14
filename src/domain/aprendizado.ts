@@ -24,6 +24,10 @@ export interface RespostaBruta {
   correta: Letra;
   topicos: string[];
   rodadaId: number;
+  /** Arquétipo do distrator marcado (ver `domain/arquetipos.ts`), só
+   * quando `resposta !== correta` E o gabarito já foi tagueado; `null` num
+   * acerto ou num gabarito ainda sem a tag daquela alternativa. */
+  arquetipoMarcado: string | null;
 }
 
 export interface EstatisticaTopico {
@@ -260,3 +264,28 @@ export function selecionarParaPraticar(
 }
 
 export const QUANTIDADE_PRATICAR_PADRAO = 5;
+
+export interface ArquetipoFrequencia {
+  arquetipoId: string;
+  contagem: number;
+}
+
+/** Quais arquétipos de distrator mais aparecem nos erros do candidato,
+ * ordenado do mais para o menos frequente — porte da agregação por
+ * arquétipo do laboratório de estudos (ver `domain/arquetipos.ts`).
+ *
+ * Conta CADA resposta errada com arquétipo conhecido (mesmo espírito de
+ * `estatisticasPorTopico`: não deduplica por questão). Erros cujo gabarito
+ * ainda não foi tagueado (`arquetipoMarcado === null`) são ignorados —
+ * silenciosamente, porque é o estado normal enquanto o conteúdo é
+ * retagueado aos poucos, não um dado corrompido. */
+export function arquetiposMaisFrequentes(respostas: RespostaBruta[]): ArquetipoFrequencia[] {
+  const contagem = new Map<string, number>();
+  for (const r of respostas) {
+    if (r.arquetipoMarcado === null) continue;
+    contagem.set(r.arquetipoMarcado, (contagem.get(r.arquetipoMarcado) ?? 0) + 1);
+  }
+  return [...contagem.entries()]
+    .map(([arquetipoId, contagem]) => ({ arquetipoId, contagem }))
+    .sort((a, b) => b.contagem - a.contagem);
+}

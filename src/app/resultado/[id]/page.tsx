@@ -44,6 +44,19 @@ interface QuestaoDetalhe {
   segundos: number;
 }
 
+interface DiagnosticoQuestao {
+  posicao: number;
+  segundos: number;
+  classificacao: "conceito" | "desatencao";
+}
+
+interface DiagnosticoRodada {
+  mediaSegundos: number;
+  erros: DiagnosticoQuestao[];
+  fadiga: boolean;
+  sinalGeral: "todas_desatencao" | "todas_conceito" | null;
+}
+
 interface DetalheRodada {
   id: number;
   modo: "pratica" | "prova";
@@ -60,6 +73,7 @@ interface DetalheRodada {
     tempoTotal: number;
   };
   questoes: QuestaoDetalhe[];
+  diagnostico: DiagnosticoRodada;
 }
 
 function agregarPor<T extends string>(
@@ -148,6 +162,9 @@ export default function TelaResultado() {
   const porBloom = agregarPor(detalhe.questoes, (q) => q.metadados.bloom);
   const porDificuldade = agregarPor(detalhe.questoes, (q) => q.metadados.dificuldade);
   const erradas = detalhe.questoes.filter((q) => q.resposta !== null && q.resposta !== q.correta);
+  const diagnosticoPorPosicao = new Map(
+    detalhe.diagnostico.erros.map((d) => [d.posicao, d.classificacao]),
+  );
 
   return (
     <main className="pagina">
@@ -179,6 +196,24 @@ export default function TelaResultado() {
             Em branco {placar.emBranco} · Tempo {mmss(placar.tempoTotal)} · Corte da prova real:
             720/1000 — acima, a taxa bruta de acertos (sem conversão)
           </p>
+          {detalhe.diagnostico.sinalGeral === "todas_desatencao" && (
+            <p className="texto-pequeno" role="status">
+              ⚡ Todos os erros desta rodada foram abaixo do tempo médio — sinal de desatenção, não
+              de lacuna de conteúdo. Tratamento: regra de leitura do enunciado, não material novo.
+            </p>
+          )}
+          {detalhe.diagnostico.sinalGeral === "todas_conceito" && (
+            <p className="texto-pequeno" role="status">
+              📚 Todos os erros desta rodada foram acima do tempo médio — sinal de lacuna de
+              conteúdo. Tratamento: material de reforço, lido antes da próxima rodada.
+            </p>
+          )}
+          {detalhe.diagnostico.fadiga && (
+            <p className="texto-pequeno" style={{ color: "var(--erro)" }} role="alert">
+              ⚠ Muitas questões desta rodada ficaram bem acima do tempo médio — possível fadiga. Se
+              esta não foi a primeira rodada do dia, considere parar em vez de estudar mais.
+            </p>
+          )}
         </section>
 
         {porDominio.length >= 2 && (
@@ -276,10 +311,22 @@ export default function TelaResultado() {
             <h2>Questões erradas</h2>
             {erradas.map((q) => (
               <article key={q.posicao} className="painel pilha">
-                <h3 style={{ fontSize: "0.95rem", color: "var(--erro)" }}>
-                  Q{q.posicao + 1} · {q.origem} Q{q.numero} · marcou {q.resposta} · correta{" "}
-                  {q.correta}
-                </h3>
+                <div className="espaco-entre">
+                  <h3 style={{ fontSize: "0.95rem", color: "var(--erro)", margin: 0 }}>
+                    Q{q.posicao + 1} · {q.origem} Q{q.numero} · marcou {q.resposta} · correta{" "}
+                    {q.correta}
+                  </h3>
+                  {diagnosticoPorPosicao.get(q.posicao) === "conceito" && (
+                    <span className="badge badge-neutro" title="tempo acima da média da rodada">
+                      📚 conceito
+                    </span>
+                  )}
+                  {diagnosticoPorPosicao.get(q.posicao) === "desatencao" && (
+                    <span className="badge badge-neutro" title="tempo na média ou abaixo da rodada">
+                      ⚡ desatenção
+                    </span>
+                  )}
+                </div>
                 <p><TextoMarkdownInline texto={q.enunciado} /></p>
                 <div className="pilha">
                   {(Object.keys(q.alternativas) as Letra[]).map((letra) => {

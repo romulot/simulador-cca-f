@@ -31,6 +31,8 @@ describe("migrate", () => {
       "002_password_reset_tokens.sql",
       "003_topicos_questoes_rodada.sql",
       "004_arquivada_rodadas.sql",
+      "005_perfil_candidato.sql",
+      "006_arquetipos_questoes_rodada.sql",
     ]);
   });
 
@@ -67,6 +69,7 @@ describe("migrate", () => {
       "resposta",
       "segundos",
       "topicos_json",
+      "arquetipos_json",
     ]);
   });
 
@@ -92,6 +95,24 @@ describe("migrate", () => {
       "disponivel_json",
       "deficit_json",
       "arquivada",
+    ]);
+  });
+
+  it("'usuarios' tem as colunas de perfil do candidato", async () => {
+    await migrar(pool);
+
+    const colunas = await pool.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_name = 'usuarios' ORDER BY ordinal_position",
+    );
+    const nomes = colunas.rows.map((c) => c.column_name);
+
+    expect(nomes).toEqual([
+      "id",
+      "email",
+      "senha_hash",
+      "criado_em",
+      "data_prova",
+      "minutos_sessao_padrao",
     ]);
   });
 

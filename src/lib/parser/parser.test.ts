@@ -12,6 +12,8 @@ import { tmpdir } from "node:os";
 
 import { carregarPar, parseGabarito, parseSimulado } from "./parser";
 import { FormatoInvalido } from "./erros";
+import { idArquetipoValido } from "@/domain/arquetipos";
+import { LETRAS } from "./tipos";
 
 // Compartilhados por vários describes abaixo (parsing em memória sempre
 // usa arquivos de fixture reais, porque `carregarPar` exige caminho
@@ -129,6 +131,46 @@ describe("parser", () => {
 
       expect(totalQuestoes).toBe(240);
       expect(questoesComMetadados.length).toBe(240);
+    });
+
+    it("banco tagueado com arquétipo de distrator (cobertura alta, id canônico, nunca a alternativa correta)", () => {
+      const dominios = readdirSync(baseDir).filter((d) => d.startsWith("dominio-"));
+
+      let totalErradas = 0;
+      let totalTageadas = 0;
+
+      for (const dominio of dominios) {
+        const dominioPath = join(baseDir, dominio);
+        const simulados = readdirSync(dominioPath).filter((a) => a.endsWith("_simulado.md")).sort();
+
+        for (const nomeSimulado of simulados) {
+          const nomeGabarito = nomeSimulado.replace("_simulado.md", "_gabarito.md");
+          const questoes = carregarPar(join(dominioPath, nomeSimulado), join(dominioPath, nomeGabarito));
+
+          for (const q of questoes) {
+            const tags = q.arquetiposErrados ?? {};
+            for (const letra of LETRAS.filter((l) => l !== q.correta)) {
+              totalErradas++;
+              if (letra in tags) totalTageadas++;
+            }
+            for (const [letra, id] of Object.entries(tags)) {
+              expect(letra).not.toBe(q.correta);
+              expect(idArquetipoValido(id as string)).toBe(true);
+            }
+          }
+        }
+      }
+
+      // Não é 100%: algumas alternativas erradas são erros mecanísticos
+      // específicos do cenário que não se encaixam com confiança em
+      // nenhum dos 10 arquétipos canônicos — omiti-las de propósito é
+      // melhor que forçar uma tag errada (ver arquivos de domínio para os
+      // casos pontuais deixados sem tag). O piso abaixo é uma trava de
+      // regressão: uma queda abrupta de cobertura indicaria um bug no
+      // parser ou uma edição de conteúdo que apagou tags por engano.
+      console.log(`Cobertura de arquétipos: ${totalTageadas}/${totalErradas}`);
+      expect(totalErradas).toBe(720);
+      expect(totalTageadas).toBeGreaterThanOrEqual(690);
     });
   });
 
@@ -323,6 +365,78 @@ Requisito sobre least privilege.
       expect(questoes[0].metadados.rubrica).toContain("Bloom 3");
       expect(questoes[0].metadados.cenario).toContain("CI");
       expect(questoes[0].metadados.principioTestado).toContain("least privilege");
+    });
+  });
+
+  describe("arquétipos de distrator (linha opcional 'Arquétipos' no bloco de metadados)", () => {
+    const comArquetipos = (linhaArquetipos: string) => `
+## Q1 — Resposta correta: **B** · (1.1)
+
+Resumo.
+
+- **A — errada:** Porque não é A
+- **B — correta:**
+- **C — errada:** Porque não é C
+- **D — errada:** Porque não é D
+
+**Tópicos:** Teste
+
+**Metadados (revisão; não exibir ao candidato):**
+- Bloom: Aplicar
+- Dificuldade: Médio
+- Rubrica: 5
+- Cenário: S1
+- Princípio testado: teste
+${linhaArquetipos}
+`;
+
+    it("gabarito sem a linha 'Arquétipos' produz objeto vazio (retrocompatível)", () => {
+      const questoes = parseGabarito(comArquetipos(""), "teste.md");
+      expect(questoes[0].arquetiposErrados).toEqual({});
+    });
+
+    it("captura o arquétipo de cada alternativa errada", () => {
+      const questoes = parseGabarito(
+        comArquetipos("- Arquétipos: A=camada-alvo-errado, C=over-engineering, D=sinal-nao-confiavel"),
+        "teste.md",
+      );
+      expect(questoes[0].arquetiposErrados).toEqual({
+        A: "camada-alvo-errado",
+        C: "over-engineering",
+        D: "sinal-nao-confiavel",
+      });
+    });
+
+    it("linha 'Arquétipos:' presente mas vazia produz objeto vazio", () => {
+      const questoes = parseGabarito(comArquetipos("- Arquétipos:"), "teste.md");
+      expect(questoes[0].arquetiposErrados).toEqual({});
+    });
+
+    it("rejeita arquétipo marcado na alternativa CORRETA", () => {
+      expect(() => parseGabarito(comArquetipos("- Arquétipos: B=over-engineering"), "teste.md")).toThrow(
+        FormatoInvalido,
+      );
+    });
+
+    it("rejeita entrada mal formada", () => {
+      expect(() => parseGabarito(comArquetipos("- Arquétipos: A-camada-alvo-errado"), "teste.md")).toThrow(
+        FormatoInvalido,
+      );
+    });
+
+    it("rejeita letra duplicada na mesma linha", () => {
+      expect(() =>
+        parseGabarito(comArquetipos("- Arquétipos: A=camada-alvo-errado, A=over-engineering"), "teste.md"),
+      ).toThrow(FormatoInvalido);
+    });
+
+    it("rejeita campo 'Arquétipos' duplicado (duas linhas)", () => {
+      expect(() =>
+        parseGabarito(
+          comArquetipos("- Arquétipos: A=camada-alvo-errado\n- Arquétipos: C=over-engineering"),
+          "teste.md",
+        ),
+      ).toThrow(FormatoInvalido);
     });
   });
 

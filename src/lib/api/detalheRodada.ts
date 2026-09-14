@@ -8,6 +8,7 @@
  * rodada passada) — mesmo formato, um lugar só que monta.
  */
 import { placar as placarDominio, relogioInerte, type Modo, type Placar } from "@/domain/rodada";
+import { diagnosticarErros, type DiagnosticoRodada } from "@/domain/diagnosticoErro";
 import type { AlternativasPorLetra, Letra, MetadadosQuestao } from "@/lib/parser/tipos";
 import type { ComposicaoPersistida, RodadaPersistida } from "@/db/repositorioRodadas";
 
@@ -35,6 +36,9 @@ export interface DetalheRodada {
   placar: Placar;
   composicao: ComposicaoPersistida;
   questoes: QuestaoDetalhe[];
+  /** Classificação de cada erro por tempo (conceito vs. desatenção) e sinal
+   * de fadiga da rodada — ver `domain/diagnosticoErro.ts`. */
+  diagnostico: DiagnosticoRodada;
 }
 
 /** Monta o detalhe completo a partir de uma `RodadaPersistida` já
@@ -66,6 +70,15 @@ export function montarDetalheRodada(persistida: RodadaPersistida): DetalheRodada
     segundos: estado.tempos[posicao],
   }));
 
+  const diagnostico = diagnosticarErros(
+    questoes.map((q) => ({
+      posicao: q.posicao,
+      segundos: q.segundos,
+      resposta: q.resposta,
+      correta: q.correta,
+    })),
+  );
+
   return {
     id: persistida.id,
     modo: estado.modo,
@@ -74,5 +87,6 @@ export function montarDetalheRodada(persistida: RodadaPersistida): DetalheRodada
     placar,
     composicao: persistida.composicao,
     questoes,
+    diagnostico,
   };
 }

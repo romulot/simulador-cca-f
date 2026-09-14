@@ -97,6 +97,7 @@ interface LinhaQuestaoRodada {
   cenario: string;
   principio_testado: string;
   topicos_json: string;
+  arquetipos_json: string;
   resposta: string | null;
   segundos: number;
 }
@@ -166,6 +167,7 @@ function linhaParaQuestao(linha: LinhaQuestaoRodada): Questao {
       principioTestado: linha.principio_testado,
     },
     topicos: JSON.parse(linha.topicos_json),
+    arquetiposErrados: JSON.parse(linha.arquetipos_json),
   };
 }
 
@@ -204,9 +206,10 @@ export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promis
         `INSERT INTO questoes_rodada
            (rodada_id, posicao, origem, dominio, numero, enunciado,
             alternativas_json, correta, resumo, explicacoes_json,
-            bloom, dificuldade, rubrica, cenario, principio_testado, topicos_json)
+            bloom, dificuldade, rubrica, cenario, principio_testado, topicos_json,
+            arquetipos_json)
          VALUES
-           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
         [
           rodadaId,
           posicao,
@@ -224,6 +227,7 @@ export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promis
           q.metadados.cenario,
           q.metadados.principioTestado,
           JSON.stringify(q.topicos),
+          JSON.stringify(q.arquetiposErrados ?? {}),
         ],
       );
     }

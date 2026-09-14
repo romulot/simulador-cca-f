@@ -21,6 +21,7 @@ A correta ataca a causa raiz: "comentário enganoso" é um adjetivo, não uma co
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S5 — Claude Code for CI/CD
 - Princípio testado: causa raiz > sintoma — o defeito está no critério, não em falta de mecanismo de gate
+- Arquétipos: A=sinal-nao-confiavel, C=over-engineering, D=over-engineering
 
 ## Q2 — Resposta correta: **C** · (4.2)
 
@@ -39,6 +40,7 @@ O valor já sai certo em 36/36 — o conteúdo não é o problema. O que varia �
 - Rubrica: 5 = Bloom 2 + integração 0 + cenário 1 + distratores 2
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: few-shot corrige forma quando prosa não corrige — eixo invertido do 4.1
+- Arquétipos: A=probabilistico-vs-garantia, B=camada-alvo-errado, D=camada-alvo-errado
 
 ## Q3 — Resposta correta: **A** · (4.3)
 
@@ -57,6 +59,7 @@ O campo está em `required` num schema `strict`, e esse regime não permite omis
 - Rubrica: 7 = Bloom 3 + integração 0 + cenário 2 + distratores 2
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: `required` em `strict` é causa estrutural, não probabilística — a correção mora no schema
+- Arquétipos: B=probabilistico-vs-garantia, C=camada-alvo-errado, D=camada-alvo-errado
 
 ## Q4 — Resposta correta: **D** · (4.4)
 
@@ -75,6 +78,7 @@ Retorno decrescente medido: 3 resolvidos na segunda tentativa, 0 na terceira. Qu
 - Rubrica: 8 = Bloom 4 + integração 0 + cenário 2 + distratores 2
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: retorno decrescente do retry — feedback pode ensinar a forma da mentira, não só corrigir o conteúdo
+- Arquétipos: A=camada-alvo-errado, B=camada-alvo-errado, C=camada-alvo-errado
 
 ## Q5 — Resposta correta: **B** · (4.5)
 
@@ -93,6 +97,7 @@ O sinal de roteamento entre síncrono e lote é "alguém fica bloqueado esperand
 - Rubrica: 6 = Bloom 4 + integração 0 + cenário 1 + distratores 1
 - Cenário: S5 — Claude Code for CI/CD
 - Princípio testado: casar a ferramenta ao requisito — batch para tolerante a latência, síncrono para bloqueante
+- Arquétipos: A=camada-alvo-errado, C=feature-inexistente-verossimil, D=camada-alvo-errado
 
 ## Q6 — Resposta correta: **D** · (4.6)
 
@@ -111,6 +116,7 @@ Nove sprints sem uma única rejeição, com seis defeitos da mesma classe chegan
 - Rubrica: 4 = Bloom 2 + integração 0 + cenário 1 + distratores 1
 - Cenário: S5 — Claude Code for CI/CD
 - Princípio testado: revisão independente > auto-revisão — o defeito está no contexto do revisor, não na instrução
+- Arquétipos: A=probabilistico-vs-garantia, B=camada-alvo-errado, C=camada-alvo-errado
 
 ## Q7 — Resposta correta: **A** · (4.3)
 
@@ -129,6 +135,7 @@ Nove sprints sem uma única rejeição, com seis defeitos da mesma classe chegan
 - Rubrica: 7 = Bloom 3 + integração 0 + cenário 2 + distratores 2
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: `any` desambigua tipo, forçado sequencia — e resposta sem `tool_use` é desfecho, não registro vazio
+- Arquétipos: B=camada-alvo-errado, C=feature-inexistente-verossimil, D=over-engineering
 
 ## Q8 — Resposta correta: **B** · (cruza 4.6 + 1.7)
 
@@ -147,6 +154,7 @@ Continuar a sessão do gerador com `--resume` mantém no histórico o próprio r
 - Rubrica: 7 = Bloom 3 + integração 1 + cenário 1 + distratores 2
 - Cenário: S5 — Claude Code for CI/CD
 - Princípio testado: revisão independente exige contexto isolado — `--resume`/`fork_session` resolvem estado, não herança de reasoning
+- Arquétipos: A=camada-alvo-errado, C=camada-alvo-errado, D=camada-alvo-errado
 - Task statements combinados: 4.6 (revisão independente vs. auto-revisão na mesma sessão) + 1.7 (`--resume`/`fork_session` resolvem estado de sessão, não herança de reasoning)
 
 ## Q9 — Resposta correta: **C** · (cruza 4.4 + 4.1)
@@ -166,6 +174,7 @@ As duas classes vivem em camadas diferentes do mesmo domínio. O erro aritmétic
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 2 + distratores 1
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: casar o mecanismo à camada do defeito — validação em código para erro estrutural, critério explícito para erro de julgamento
+- Arquétipos: A=camada-alvo-errado, B=probabilistico-vs-garantia, D=camada-alvo-errado
 - Task statements combinados: 4.4 (validação em código + feedback estruturado) + 4.1 (conserto de critério vago, não gate/classificador)
 
 ## Q10 — Resposta correta: **B** · (cruza 4.5 + 4.6)
@@ -185,6 +194,7 @@ Ninguém espera o resultado — o sinal do 4.5 aponta para o lote. Mas dentro do
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S5 — Claude Code for CI/CD
 - Princípio testado: casar a ferramenta ao requisito, mantendo a decomposição por arquivo + integração mesmo dentro do lote
+- Arquétipos: A=camada-alvo-errado, C=camada-alvo-errado, D=extremo-vs-meio
 - Task statements combinados: 4.5 (roteamento para batch e `custom_id`) + 4.6 (decomposição em passes locais e pass de integração)
 
 ## Q11 — Resposta correta: **A** · (cruza 4.6 + 4.1 + 5.5)
@@ -204,6 +214,7 @@ A tabela de calibração já existe e já está sendo usada: 91% de acerto na fa
 - Rubrica: 9 = Bloom 4 + integração 2 + cenário 1 + distratores 2
 - Cenário: S5 — Claude Code for CI/CD
 - Princípio testado: confiança auto-reportada serve para roteamento calibrado e medido, nunca como gate automático
+- Arquétipos: B=over-engineering, C=extremo-vs-meio, D=sinal-nao-confiavel
 - Task statements combinados: 4.6 (confiança por achado para roteamento) + 4.1 (proxy auto-reportado como distrator clássico quando mecanizado em gate) + 5.5 (calibração de confiança para revisão humana)
 
 ## Q12 — Resposta correta: **A** · (4.5)
@@ -223,6 +234,7 @@ A tabela de calibração já existe e já está sendo usada: 91% de acerto na fa
 - Rubrica: 7 = Bloom 3 + integração 1 + cenário 1 + distratores 2
 - Cenário: S6 — Structured Data Extraction
 - Princípio testado: resposta sem bloco `tool_use` é desfecho, nunca "zero achados" — regra transversal do domínio, com raiz no 3.6
+- Arquétipos: B=vazio-ausente, C=extremo-vs-meio, D=camada-alvo-errado
 
 ---
 

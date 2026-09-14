@@ -21,6 +21,7 @@ function resposta(parcial: Partial<RespostaBruta> & { origem: string; numero: nu
     correta: "A",
     topicos: ["Hooks"],
     rodadaId: 1,
+    arquetipoMarcado: null,
     ...parcial,
   };
 }

@@ -43,8 +43,12 @@ const TOPICOS_MARCADOR = /^\*\*Tópicos:\*\*\s*(.*)$/;
 // Início do bloco de metadados de revisão do gabarito.
 const METADADOS_MARCADOR = /^\*\*Metadados\b/;
 // Campo do bloco de metadados: "- Bloom: Aplicar" / "- Rubrica (§3): ...".
+// "Arquétipos" é um sexto campo reconhecido no mesmo bloco, mas OPCIONAL
+// (não entra em `obrigatorios`) e de forma diferente dos outros cinco — não
+// é uma string livre, é uma lista "letra=id"; por isso tem parsing próprio
+// (`parseLinhaArquetipos`) em vez de cair em `CAMPO_PARA_CHAVE`.
 const METADADO_CAMPO =
-  /^-\s*(Bloom|Dificuldade|Rubrica|Cenário|Princípio testado)\s*(?:\(§?\d+\))?\s*:\s*(.*)$/;
+  /^-\s*(Bloom|Dificuldade|Rubrica|Cenário|Princípio testado|Arquétipos)\s*(?:\(§?\d+\))?\s*:\s*(.*)$/;
 
 const CAMPO_PARA_CHAVE: Record<string, keyof MetadadosQuestao> = {
   Bloom: "bloom",
@@ -140,23 +144,82 @@ export function parseSimulado(texto: string, arquivo = "<memória>"): QuestaoSim
   return resultado;
 }
 
-/** Encontra e valida o bloco "**Metadados ...**" de uma questão do gabarito. */
+/** Parseia a linha "- Arquétipos: A=id, C=id" — só as letras ERRADAS podem
+ * aparecer, cada `id` é validado só na FORMA (kebab-case), nunca contra o
+ * conjunto canônico de `domain/arquetipos.ts`: mesma filosofia de
+ * `**Tópicos:**`, que também não valida contra o catálogo em tempo de
+ * parse (um id desconhecido é um problema de qualidade de conteúdo,
+ * pego por teste de integridade do corpus, não um erro estrutural de
+ * formato). Linha vazia (`Arquétipos:` sem nada depois) é válida e
+ * significa "ainda não tagueado". */
+function parseLinhaArquetipos(
+  texto: string,
+  arquivo: string,
+  numero: number,
+  correta: Letra,
+): Partial<Record<Letra, string>> {
+  const resultado: Partial<Record<Letra, string>> = {};
+  const pares = texto
+    .split(",")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0);
+
+  for (const par of pares) {
+    const m = /^([A-D])\s*=\s*([a-z][a-z0-9-]*)$/.exec(par);
+    if (!m) {
+      throw new FormatoInvalido(arquivo, numero, `entrada de arquétipo mal formada: "${par}"`);
+    }
+    const letra = m[1] as Letra;
+    if (letra === correta) {
+      throw new FormatoInvalido(
+        arquivo,
+        numero,
+        `arquétipo não pode marcar a alternativa correta (${letra})`,
+      );
+    }
+    if (letra in resultado) {
+      throw new FormatoInvalido(arquivo, numero, `arquétipo da alternativa ${letra} duplicado`);
+    }
+    resultado[letra] = m[2];
+  }
+
+  return resultado;
+}
+
+/** Encontra e valida o bloco "**Metadados ...**" de uma questão do gabarito.
+ *
+ * Também captura, do mesmo bloco, a linha OPCIONAL "Arquétipos" (ver
+ * `parseLinhaArquetipos`) — por isso devolve os dois resultados juntos: um
+ * único laço sobre o bloco, em vez de escanear duas vezes. */
 function parseMetadados(
   corpo: string[],
   arquivo: string,
   numero: number,
-): MetadadosQuestao {
+  correta: Letra,
+): { metadados: MetadadosQuestao; arquetiposErrados: Partial<Record<Letra, string>> } {
   const marcador = corpo.findIndex((l) => METADADOS_MARCADOR.test(l.trim()));
   if (marcador === -1) {
     throw new FormatoInvalido(arquivo, numero, "bloco de metadados ausente");
   }
 
   const campos: Partial<Record<keyof MetadadosQuestao, string>> = {};
+  let arquetiposErrados: Partial<Record<Letra, string>> = {};
+  let arquetiposVistos = false;
   for (let k = marcador + 1; k < corpo.length; k++) {
     const linha = corpo[k].trim();
     if (!linha) break;
     const m = METADADO_CAMPO.exec(linha);
     if (!m) break;
+
+    if (m[1] === "Arquétipos") {
+      if (arquetiposVistos) {
+        throw new FormatoInvalido(arquivo, numero, "campo de metadados Arquétipos duplicado");
+      }
+      arquetiposVistos = true;
+      arquetiposErrados = parseLinhaArquetipos(m[2].trim(), arquivo, numero, correta);
+      continue;
+    }
+
     const chave = CAMPO_PARA_CHAVE[m[1]];
     if (chave in campos) {
       throw new FormatoInvalido(arquivo, numero, `campo de metadados ${m[1]} duplicado`);
@@ -176,7 +239,7 @@ function parseMetadados(
     throw new FormatoInvalido(arquivo, numero, `faltam campos de metadados ${JSON.stringify(faltando)}`);
   }
 
-  return campos as MetadadosQuestao;
+  return { metadados: campos as MetadadosQuestao, arquetiposErrados };
 }
 
 /** Encontra e valida a linha "**Tópicos:** ..." de uma questão do gabarito.
@@ -260,10 +323,10 @@ export function parseGabarito(texto: string, arquivo = "<memória>"): QuestaoGab
       throw new FormatoInvalido(arquivo, numero, `explicações vazias ${JSON.stringify(vazias)}`);
     }
 
-    const metadados = parseMetadados(corpo, arquivo, numero);
+    const { metadados, arquetiposErrados } = parseMetadados(corpo, arquivo, numero, correta);
     const topicos = parseTopicos(corpo, arquivo, numero);
 
-    resultado.push({ numero, correta, resumo, explicacoes, metadados, topicos });
+    resultado.push({ numero, correta, resumo, explicacoes, metadados, topicos, arquetiposErrados });
   }
 
   return resultado;
@@ -355,6 +418,7 @@ export function carregarPar(caminhoSimulado: string, caminhoGabarito: string): Q
       explicacoes: g.explicacoes,
       metadados: g.metadados,
       topicos: g.topicos,
+      arquetiposErrados: g.arquetiposErrados,
     });
   }
 

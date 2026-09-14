@@ -19,6 +19,7 @@ interface LinhaRespostaBruta {
   resposta: string;
   correta: string;
   topicos_json: string;
+  arquetipos_json: string;
   rodada_id: number;
 }
 
@@ -28,7 +29,8 @@ interface LinhaRespostaBruta {
  * pressupõe para achar "a última tentativa" de cada questão. */
 export async function respostasBrutas(pool: Pool, userId: number): Promise<RespostaBruta[]> {
   const resultado = await pool.query<LinhaRespostaBruta>(
-    `SELECT qr.origem, qr.numero, qr.dominio, qr.resposta, qr.correta, qr.topicos_json, qr.rodada_id
+    `SELECT qr.origem, qr.numero, qr.dominio, qr.resposta, qr.correta, qr.topicos_json,
+            qr.arquetipos_json, qr.rodada_id
      FROM questoes_rodada qr
      JOIN rodadas r ON r.id = qr.rodada_id
      WHERE r.user_id = $1 AND r.status = 'finalizada' AND r.arquivada = FALSE AND qr.resposta IS NOT NULL
@@ -36,13 +38,19 @@ export async function respostasBrutas(pool: Pool, userId: number): Promise<Respo
     [userId],
   );
 
-  return resultado.rows.map((linha) => ({
-    origem: linha.origem,
-    numero: linha.numero,
-    dominio: linha.dominio,
-    resposta: linha.resposta as Letra,
-    correta: linha.correta as Letra,
-    topicos: JSON.parse(linha.topicos_json),
-    rodadaId: linha.rodada_id,
-  }));
+  return resultado.rows.map((linha) => {
+    const resposta = linha.resposta as Letra;
+    const correta = linha.correta as Letra;
+    const arquetipos = JSON.parse(linha.arquetipos_json) as Partial<Record<Letra, string>>;
+    return {
+      origem: linha.origem,
+      numero: linha.numero,
+      dominio: linha.dominio,
+      resposta,
+      correta,
+      topicos: JSON.parse(linha.topicos_json),
+      rodadaId: linha.rodada_id,
+      arquetipoMarcado: resposta !== correta ? (arquetipos[resposta] ?? null) : null,
+    };
+  });
 }

@@ -45,6 +45,15 @@ export interface Questao {
    * campos, não é "não exibir ao candidato": tópicos alimentam features
    * voltadas ao candidato (catálogo de materiais, praticar por tópico). */
   topicos: string[];
+  /** Arquétipo de distrator (ver `domain/arquetipos.ts`) de cada
+   * alternativa ERRADA — nunca inclui a letra `correta`. Campo OPCIONAL de
+   * propósito (ao contrário de `topicos`): fixtures de teste espalhadas
+   * pelo código que constroem um `Questao` à mão não precisam saber deste
+   * campo. Ausente/`undefined` equivale a `{}` — gabarito ainda não
+   * tagueado. Assim como os campos de `metadados`, é "não exibir ao
+   * candidato" — a explicação já traz, em prosa, o próprio raciocínio do
+   * distrator; esta tag é só para agregação/analytics. */
+  arquetiposErrados?: Partial<Record<Letra, string>>;
 }
 
 /** Resultado intermediário de `parseSimulado`, por questão. */
@@ -62,4 +71,5 @@ export interface QuestaoGabarito {
   explicacoes: AlternativasPorLetra;
   metadados: MetadadosQuestao;
   topicos: string[];
+  arquetiposErrados: Partial<Record<Letra, string>>;
 }

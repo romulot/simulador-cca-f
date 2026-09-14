@@ -208,6 +208,20 @@ export default function Menu() {
             Meus pontos fracos
           </Link>
 
+          <Link href="/proxima-sessao" className="botao botao-bloco">
+            Próxima sessão
+          </Link>
+
+          <Link
+            href="/caderno"
+            className={`botao botao-bloco${totalRodadas === 0 ? " botao-desabilitado" : ""}`}
+            aria-disabled={totalRodadas === 0}
+            tabIndex={totalRodadas === 0 ? -1 : undefined}
+            onClick={(e) => totalRodadas === 0 && e.preventDefault()}
+          >
+            Caderno de erros
+          </Link>
+
           <Link href="/gerenciar-progresso" className="botao botao-fantasma botao-bloco">
             Gerenciar progresso
           </Link>

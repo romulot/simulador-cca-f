@@ -21,6 +21,7 @@ Explicações em PT-BR. O sufixo `· (x.y)` indica o task statement; itens cruza
 - Rubrica: 6 = Bloom 3 + integração 1 + cenário 1 + distratores 1
 - Cenário: S2 — Code Generation with Claude Code
 - Princípio testado: causa raiz > sintoma — o sintoma "o Claude ignora a convenção" tem causa em resolução de config
+- Arquétipos: A=camada-alvo-errado, B=feature-inexistente-verossimil, D=camada-alvo-errado
 
 ## Q2 — Resposta correta: **A** · (3.2)
 
@@ -39,6 +40,7 @@ Skill é **model-invocable por padrão** (Claude decide pela `description`); `di
 - Rubrica: 5 = Bloom 3 + integração 0 + cenário 1 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: controle de invocação é config determinística, não qualidade de redação da `description`
+- Arquétipos: B=extremo-vs-meio, C=feature-inexistente-verossimil, D=camada-alvo-errado
 
 ## Q3 — Resposta correta: **D** · (3.3)
 
@@ -57,6 +59,7 @@ Uma **path-rule injeta texto de instrução** quando o glob casa; uma **skill co
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S5 — Claude Code for CI
 - Princípio testado: casar o mecanismo ao requisito — `paths` de rule × `paths` de skill usam o mesmo glob e fazem coisas diferentes
+- Arquétipos: A=camada-alvo-errado, B=camada-alvo-errado, C=extremo-vs-meio
 
 ## Q4 — Resposta correta: **B** · (3.4)
 
@@ -75,6 +78,7 @@ Aprovar o plano **sai** do plan mode: a sessão passa ao modo descrito pela opç
 - Rubrica: 6 = Bloom 3 + integração 1 + cenário 1 + distratores 1
 - Cenário: S2 — Code Generation with Claude Code
 - Princípio testado: causa raiz > sintoma — o ciclo de vida do modo de permissão explica o comportamento, não uma falha do modelo
+- Arquétipos: A=feature-inexistente-verossimil, C=feature-inexistente-verossimil, D=camada-alvo-errado
 
 ## Q5 — Resposta correta: **C** · (3.5)
 
@@ -93,6 +97,7 @@ A busca de `session_id` é **escopada ao diretório do projeto**. Rodando as rod
 - Rubrica: 7 = Bloom 3 + integração 1 + cenário 2 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: casar a ferramenta ao requisito — devolver a falha real **na mesma sessão** exige que o resume de fato encontre a sessão
+- Arquétipos: A=camada-alvo-errado, B=montante-jusante, D=camada-alvo-errado
 
 ## Q6 — Resposta correta: **A** · (3.6)
 
@@ -111,6 +116,7 @@ A busca de `session_id` é **escopada ao diretório do projeto**. Rodando as rod
 - Rubrica: 5 = Bloom 2 + integração 1 + cenário 1 + distratores 1
 - Cenário: S5 — Claude Code for CI
 - Princípio testado: enforcement programático > declaração decorativa — validação real no gate
+- Arquétipos: B=feature-inexistente-verossimil, C=probabilistico-vs-garantia, D=over-engineering
 
 ## Q7 — Resposta correta: **D** · (3.4) — quebra-automatismo
 
@@ -129,6 +135,7 @@ A decisão vem dos **sinais observáveis**, não da contagem de arquivos: a caus
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 2 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: resposta proporcional / menor esforço que ataca a causa raiz
+- Arquétipos: A=sinal-nao-confiavel, B=over-engineering, C=over-engineering
 
 ## Q8 — Resposta correta: **B** · (3.1)
 
@@ -147,6 +154,7 @@ Antes de mover ou reescrever qualquer coisa, é preciso saber **de onde** a inst
 - Rubrica: 6 = Bloom 3 + integração 1 + cenário 1 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: causa raiz > sintoma — `/memory` inspeciona qual escopo está carregado antes de qualquer mudança
+- Arquétipos: A=probabilistico-vs-garantia, C=extremo-vs-meio, D=over-engineering
 
 ## Q9 — Resposta correta: **A** · (cruza 3.3 + 3.1)
 
@@ -165,6 +173,7 @@ Antes de mover ou reescrever qualquer coisa, é preciso saber **de onde** a inst
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S5 — Claude Code for CI
 - Princípio testado: garantia é propriedade do mecanismo — só a camada managed é não sobrescrevível
+- Arquétipos: B=camada-alvo-errado, C=probabilistico-vs-garantia, D=feature-inexistente-verossimil
 - Task statements combinados: 3.3 (escopos e limites de `.claude/rules/`) + 3.1 (camada managed do CLAUDE.md)
 
 ## Q10 — Resposta correta: **C** · (cruza 3.2 + 1.7)
@@ -184,6 +193,7 @@ O que se quer é **ramificar a conversa inteira** a partir de um estado caro de 
 - Rubrica: 8 = Bloom 4 + integração 1 + cenário 1 + distratores 2
 - Cenário: S2 — Code Generation with Claude Code
 - Princípio testado: casar o mecanismo ao requisito — ramificar conversa × isolar execução × delegar descoberta são três coisas
+- Arquétipos: A=camada-alvo-errado, B=camada-alvo-errado, D=camada-alvo-errado
 - Task statements combinados: 3.2 (`context: fork` em skill) + 1.7 (session fork / `fork_session`)
 
 ## Q11 — Resposta correta: **D** · (cruza 3.4 + 3.6)
@@ -203,6 +213,7 @@ O requisito é de **incapacidade**, não de improbabilidade. `--allowedTools` **
 - Rubrica: 9 = Bloom 4 + integração 2 + cenário 1 + distratores 2
 - Cenário: S5 — Claude Code for CI
 - Princípio testado: least privilege determinístico — restringir o conjunto de tools, não pré-aprovar nem pedir em prosa
+- Arquétipos: A=feature-inexistente-verossimil, B=probabilistico-vs-garantia, C=camada-alvo-errado
 - Task statements combinados: 3.4 (modo de permissão não é garantia sob bypass) + 3.6 (`--tools` × `--allowedTools` × `--max-turns` em CI)
 
 ## Q12 — Resposta correta: **B** · (cruza 3.1 + 3.2)
@@ -222,6 +233,7 @@ São **dois mecanismos de resolução diferentes**, e o cenário mostra os dois 
 - Rubrica: 8 = Bloom 3 + integração 2 + cenário 2 + distratores 1
 - Cenário: S4 — Developer Productivity
 - Princípio testado: casar o modelo mental ao mecanismo — memória concatena, commands/skills e MCP fazem override sem merge
+- Arquétipos: A=feature-inexistente-verossimil, C=camada-alvo-errado, D=camada-alvo-errado
 - Task statements combinados: 3.1 (concatenação de memória por camada) + 3.2 (override de escopo project × user em skills)
 
 ---

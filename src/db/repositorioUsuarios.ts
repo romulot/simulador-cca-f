@@ -50,3 +50,41 @@ export async function buscarUsuarioPorEmail(pool: Pool, email: string): Promise<
   if (!linha) return null;
   return { id: linha.id, email: linha.email, senhaHash: linha.senha_hash };
 }
+
+/** Perfil do candidato usado pelo motor de recomendação adaptativa
+ * (`domain/recomendacao.ts`): data da prova (urgência) e minutos por sessão
+ * padrão (corte de tempo quando a rota não recebe 'minutos' explícito).
+ * Ambos opcionais — nem todo candidato preenche antes de praticar.
+ *
+ * `dataProva` é texto ISO 'YYYY-MM-DD', nunca um tipo Date nativo do
+ * driver: evita a conversão de fuso horário que `pg` aplicaria a uma coluna
+ * DATE/TIMESTAMPTZ (mesma razão de `rodadas.iniciada_em` ser TEXT). Quem
+ * exibe o valor formata a string diretamente, sem passar por `new Date()`.
+ */
+export interface PerfilCandidato {
+  dataProva: string | null;
+  minutosSessaoPadrao: number | null;
+}
+
+export async function obterPerfil(pool: Pool, userId: number): Promise<PerfilCandidato> {
+  const resultado = await pool.query<{ data_prova: string | null; minutos_sessao_padrao: number | null }>(
+    "SELECT data_prova, minutos_sessao_padrao FROM usuarios WHERE id = $1",
+    [userId],
+  );
+  const linha = resultado.rows[0];
+  if (!linha) {
+    throw new Error(`obterPerfil: usuário ${userId} não encontrado`);
+  }
+  return { dataProva: linha.data_prova, minutosSessaoPadrao: linha.minutos_sessao_padrao };
+}
+
+export async function salvarPerfil(
+  pool: Pool,
+  userId: number,
+  perfil: PerfilCandidato,
+): Promise<void> {
+  await pool.query(
+    "UPDATE usuarios SET data_prova = $2, minutos_sessao_padrao = $3 WHERE id = $1",
+    [userId, perfil.dataProva, perfil.minutosSessaoPadrao],
+  );
+}

@@ -27,9 +27,27 @@ Mapeamento de cada regra de negócio preservada da versão original (TUI, `simul
 | Nenhuma questão respondida sem confirmação explícita ao finalizar com itens em branco | `src/app/rodada/[id]/page.tsx` | `e2e/fluxo-completo.spec.ts` |
 | Estado nunca comunicado só por cor (badges/trilha sempre têm ícone+texto) | `globals.css`, `Trilha.tsx`, `Barra.tsx` | Revisão manual (Tarefa 21); sem teste automatizado dedicado — ver limitação abaixo |
 
+## Paridade com o laboratório de estudos (`claude-cca-f-estudos`)
+
+Mapeamento das capacidades pedagógicas do laboratório de estudos (repositório irmão, não-web, com simulador TUI em Python) portadas para este simulador online. Diferente da seção acima — que documenta paridade comportamental contra uma versão TUI **deste próprio projeto** — esta tabela cruza contra um repositório **externo**, cujas skills e scripts de referência ficam em `.claude/skills/` e `conhecimento/` daquele repositório.
+
+| Capacidade do laboratório de estudos | Referência lá | Onde vive aqui | Teste automatizado |
+|---|---|---|---|
+| Classificador de erro por tempo (conceito vs. desatenção) e sinal de fadiga da rodada | `.claude/skills/corrigir-rodada/scripts/extrair_erros.py` | `src/domain/diagnosticoErro.ts` | `diagnosticoErro.test.ts` |
+| Motor de recomendação adaptativa de próxima sessão (peso do domínio × cobertura que falta × acurácia secundária, cortado por tempo disponível) | `.claude/skills/proxima-sessao/scripts/recomendar.py` | `src/domain/recomendacao.ts`, `GET /api/aprendizado/proxima-sessao` | `recomendacao.test.ts`, `proxima-sessao/route.test.ts` |
+| Perfil do candidato (data da prova, minutos por sessão padrão) | `candidatos/<nome>/PERFIL.md` (manual, lá) | `usuarios.data_prova`/`minutos_sessao_padrao` (migration `005`), `GET/PUT /api/perfil` | `perfil/route.test.ts` |
+| Caderno de erros/revisão (recorrência por tópico + texto completo das questões aguardando revisão), com "modo véspera" condensado | `candidatos/<nome>/caderno-erros.md` + skill `caderno-mobile` (curados à mão, lá) | `GET /api/aprendizado/caderno`, página `/caderno` — aqui 100% derivado, nunca editado à mão | `caderno/route.test.ts` |
+| Taxonomia de arquétipos de distrator (8 arquétipos + 2 menores) e agregação de quais mais confundem o candidato | `conhecimento/arquetipos-distrator.md` | `src/domain/arquetipos.ts`; tag por alternativa errada em `content/simulados/**/*_gabarito.md` (linha `Arquétipos:` no bloco de metadados) e `questoes_rodada.arquetipos_json` (migration `006`) | `parser.test.ts` (formato + cobertura ≥ 690/720), `aprendizado.test.ts` (`arquetiposMaisFrequentes`) |
+
+Diferenças deliberadas em relação ao original (documentadas nos próprios módulos, não é divergência silenciosa):
+- **Cobertura por tópico nunca usa uma constante importada** (o script original assume 6 questões fixas por task statement); aqui é sempre contada a partir do corpus real (`recomendacao.ts::contarDisponivelPorTopico`), pela mesma regra que já valia para `PESOS` em `sorteio.ts` — o que descreve o CORPUS nunca é embutido.
+- **Banco complementar/comunidade, ingestão de simulados externos, exercícios de código e lista de leitura estruturada** não foram portados — são pipelines de autoria de conteúdo (não fazem sentido como feature de um app 100% online single-bank hoje) e ficam no backlog.
+- **Edição manual do caderno de erros** (o aspecto curado à mão do `caderno-erros.md` original) não foi portada — o caderno aqui é 100% derivado ao vivo, coerente com a regra já existente neste projeto de nunca persistir estado que deveria ser recalculado.
+- Cobertura de arquétipos ficou em **696/720 (~97%)**: as ~24 alternativas restantes são erros mecanísticos específicos do cenário que não se encaixam com confiança em nenhum dos 10 arquétipos canônicos — omitidas de propósito (ver comentário do teste em `parser.test.ts`) em vez de forçadas.
+
 ## Suítes e como rodar
 
-- `yarn test` — 98 testes (Vitest): parser, catálogo, domínio, persistência, rotas de API.
+- `yarn test` — 290 testes (Vitest): parser, catálogo, domínio, persistência, rotas de API.
 - `yarn test:e2e` — 3 testes (Playwright): fluxo completo no navegador, modo prova, atalhos de teclado.
 - `docker compose up -d --build` + verificação manual — build multi-stage, usuário não-root, persistência do volume entre `down`/`up`, remoção do histórico com `down -v`. Documentado e testado manualmente na Tarefa 24 (não há teste automatizado de Docker no CI desta versão).
 
