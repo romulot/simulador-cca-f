@@ -13,6 +13,8 @@ import {
   irPara,
   MODO_PRATICA,
   MODO_PROVA,
+  MODO_ALEATORIO,
+  modoAvaliativo,
   placar,
   proximaEmBranco,
   responder,
@@ -271,6 +273,12 @@ describe("proximaEmBranco / emBranco", () => {
 });
 
 describe("placar — dois denominadores", () => {
+  it("classifica prova e aleatório como avaliativos, mas não prática", () => {
+    expect(modoAvaliativo(MODO_PROVA)).toBe(true);
+    expect(modoAvaliativo(MODO_ALEATORIO)).toBe(true);
+    expect(modoAvaliativo(MODO_PRATICA)).toBe(false);
+  });
+
   it("percentual sobre respondidas e percentualTotal sobre o total divergem com em branco", () => {
     const questoes = [
       questaoFake(1, "A"),

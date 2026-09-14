@@ -1,5 +1,5 @@
 export interface EstadoParaPolling {
-  modo: "pratica" | "prova";
+  modo: "pratica" | "aleatorio" | "prova";
   status: "em_andamento" | "finalizada";
   encerrada: boolean;
 }
@@ -18,7 +18,7 @@ export function deveSincronizarRodada(
 ): boolean {
   return (
     abaVisivel &&
-    estado?.modo === "prova" &&
+    (estado?.modo === "prova" || estado?.modo === "aleatorio") &&
     estado.status === "em_andamento" &&
     !estado.encerrada
   );

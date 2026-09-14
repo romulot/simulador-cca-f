@@ -14,6 +14,7 @@ import type { Questao } from "@/lib/parser/tipos";
 export const PESOS: Record<number, number> = { 1: 27, 2: 18, 3: 20, 4: 20, 5: 15 };
 export const TOTAL_PROVA = 60;
 export const LIMITE_SEGUNDOS = 120 * 60;
+export const SEGUNDOS_POR_QUESTAO_AVALIATIVA = LIMITE_SEGUNDOS / TOTAL_PROVA;
 
 /** Gerador de números pseudoaleatórios injetável.
  *

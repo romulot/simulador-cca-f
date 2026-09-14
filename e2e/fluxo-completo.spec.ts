@@ -132,6 +132,27 @@ test("modo prova sorteia 60 questões e mostra o cronômetro regressivo", async 
   await expect(page.getByText(/^\d{2,3}:\d{2}$/)).toBeVisible();
 });
 
+test("modo aleatório respeita a quantidade e só corrige no resultado", async ({ page }) => {
+  await entrar(page);
+  await page.getByLabel("Número de questões").fill("3");
+  await page.getByRole("button", { name: "Começar" }).click();
+  await page.waitForURL(/\/rodada\/\d+/);
+  await expect(page.getByText("Questão 1/3")).toBeVisible();
+
+  for (let indice = 1; indice <= 3; indice++) {
+    await page.getByRole("button", { name: /^A\)/ }).click();
+    await expect(page.getByText(/Resposta correta|Resposta incorreta/)).toHaveCount(0);
+    if (indice < 3) await expect(page.getByText(`Questão ${indice + 1}/3`)).toBeVisible();
+  }
+
+  await page.getByRole("button", { name: "Finalizar rodada" }).click();
+  await page.getByRole("button", { name: "Sim, finalizar" }).click();
+  await page.waitForURL(/\/resultado\/\d+/);
+  await expect(page.getByRole("heading", { name: "Resultado" })).toBeVisible();
+  await expect(page.getByText(/Modo aleatório/)).toBeVisible();
+  await expect(page.getByText(/\d+\/3/).first()).toBeVisible();
+});
+
 test("teclado: responder com a tecla A e navegar com as setas", async ({ page }) => {
   await entrar(page);
   await page.goto("/selecao");

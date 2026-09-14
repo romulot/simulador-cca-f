@@ -22,8 +22,10 @@ describe("POST /api/auth/esqueci-senha", () => {
   });
 
   it("devolve a mesma mensagem para e-mail existente e inexistente", async () => {
-    const email = `recuperar-${Date.now()}-${Math.random()}@exemplo.invalido`;
-    await criarUsuario(await obterConexao(), email, await hashSenha("senha-antiga"));
+    const email = `teste-recuperar-${Date.now()}-${Math.random()}@exemplo.invalido`;
+    const pool = await obterConexao();
+    const usuario = await criarUsuario(pool, email, await hashSenha("senha-antiga"));
+    await pool.query("UPDATE usuarios SET acesso_ativo = TRUE WHERE id = $1", [usuario.id]);
     const { POST } = await import("./route");
     const existente = await POST(post(email));
     const inexistente = await POST(post(`ausente-${Date.now()}@exemplo.invalido`));

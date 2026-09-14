@@ -59,7 +59,7 @@ interface DiagnosticoRodada {
 
 interface DetalheRodada {
   id: number;
-  modo: "pratica" | "prova";
+  modo: "pratica" | "aleatorio" | "prova";
   quando: string;
   esgotouTempo: boolean;
   placar: {
@@ -153,9 +153,9 @@ export default function TelaResultado() {
   }
 
   const { placar } = detalhe;
-  const denominadorPrincipal = detalhe.modo === "prova" ? placar.total : placar.respondidas;
-  const percentualPrincipal =
-    detalhe.modo === "prova" ? placar.percentualTotal : placar.percentual;
+  const modoAvaliativo = detalhe.modo === "prova" || detalhe.modo === "aleatorio";
+  const denominadorPrincipal = modoAvaliativo ? placar.total : placar.respondidas;
+  const percentualPrincipal = modoAvaliativo ? placar.percentualTotal : placar.percentual;
 
   const origens = [...new Set(detalhe.questoes.map((q) => q.origem))].sort();
   const porDominio = agregarPor(detalhe.questoes, (q) => String(q.dominio ?? "sem domínio"));
@@ -179,7 +179,11 @@ export default function TelaResultado() {
         <section className="painel pilha">
           <div className="espaco-entre">
             <span className="mono texto-fraco">
-              {detalhe.modo === "prova" ? "Modo prova" : origens.join(", ")} ·{" "}
+              {detalhe.modo === "prova"
+                ? "Modo prova"
+                : detalhe.modo === "aleatorio"
+                  ? "Modo aleatório"
+                  : origens.join(", ")} ·{" "}
               {formatarData(new Date(detalhe.quando))}
             </span>
             {detalhe.esgotouTempo && (

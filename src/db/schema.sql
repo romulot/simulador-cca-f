@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
 CREATE TABLE IF NOT EXISTS rodadas (
   id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
-  modo TEXT NOT NULL CHECK (modo IN ('pratica', 'prova')),
+  modo TEXT NOT NULL CHECK (modo IN ('pratica', 'aleatorio', 'prova')),
   iniciada_em TEXT NOT NULL,
   limite_segundos INTEGER,
   -- DOUBLE PRECISION (não INTEGER): `decorrido()` no domínio

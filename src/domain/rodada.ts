@@ -19,7 +19,14 @@ import { embaralhar, type Rng } from "./sorteio";
 
 export const MODO_PRATICA = "pratica" as const;
 export const MODO_PROVA = "prova" as const;
-export type Modo = typeof MODO_PRATICA | typeof MODO_PROVA;
+export const MODO_ALEATORIO = "aleatorio" as const;
+export type Modo = typeof MODO_PRATICA | typeof MODO_PROVA | typeof MODO_ALEATORIO;
+
+/** Modos em que questões em branco contam como erro no percentual de
+ * destaque e o gabarito só é revelado ao encerrar a rodada. */
+export function modoAvaliativo(modo: Modo): boolean {
+  return modo === MODO_PROVA || modo === MODO_ALEATORIO;
+}
 
 /** Relógio injetável: segundos (ponto flutuante), no espírito de
  * `time.monotonic` do Python — não precisa ser hora de parede, só
@@ -64,9 +71,9 @@ export interface RodadaEstado {
 
 /** Resultado da rodada, com os dois denominadores.
  *
- * Quem escolhe qual é a manchete é a camada de relatório, pelo modo: no
- * modo prova o exame conta em branco como erro (denominador = `total`), na
- * prática o denominador é o que foi respondido.
+ * Quem escolhe qual é a manchete é a camada de relatório, pelo modo: nos
+ * modos avaliativos, questões em branco contam como erro (denominador =
+ * `total`); na prática, o denominador é o que foi respondido.
  */
 export interface Placar {
   total: number;

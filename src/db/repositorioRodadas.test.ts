@@ -67,6 +67,20 @@ describe("repositorioRodadas", () => {
     expect(persistida!.composicao).toEqual({ cotas: null, disponivel: null, deficit: null });
   });
 
+  it("grava e recarrega o modo aleatório sem composição e com limite proporcional", async () => {
+    const id = await criarRodada(pool, {
+      userId,
+      questoes: [questaoFake(1), questaoFake(2)],
+      modo: "aleatorio",
+      limiteSegundos: 240,
+    });
+
+    const persistida = (await carregarRodada(pool, id, userId))!;
+    expect(persistida.estado.modo).toBe("aleatorio");
+    expect(persistida.estado.limiteSegundos).toBe(240);
+    expect(persistida.composicao).toEqual({ cotas: null, disponivel: null, deficit: null });
+  });
+
   it("grava a composição do modo prova (cotas/disponivel/deficit) e recarrega intacta", async () => {
     const questoes = [questaoFake(1)];
 

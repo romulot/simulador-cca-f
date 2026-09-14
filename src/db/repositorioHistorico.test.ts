@@ -53,7 +53,11 @@ describe("repositorioHistorico", () => {
   /** Cria e encerra uma rodada completa, persistindo o resultado. */
   async function criarRodadaFinalizada(
     dono: number,
-    opts: { questoes: Questao[]; respostas: Array<"A" | "B" | "C" | "D">; modo?: "pratica" | "prova" },
+    opts: {
+      questoes: Questao[];
+      respostas: Array<"A" | "B" | "C" | "D">;
+      modo?: "pratica" | "aleatorio" | "prova";
+    },
   ): Promise<number> {
     const id = await criarRodada(pool, {
       userId: dono,
@@ -95,6 +99,18 @@ describe("repositorioHistorico", () => {
 
     expect(await contarHistorico(pool, userId)).toBe(1);
     expect((await ultimaEntradaHistorico(pool, userId))!.placar!.acertos).toBe(2);
+  });
+
+  it("preserva o modo aleatório no histórico", async () => {
+    await criarRodadaFinalizada(userId, {
+      questoes: [questaoFake(1, "A")],
+      respostas: ["A"],
+      modo: "aleatorio",
+    });
+
+    const entrada = (await listarHistorico(pool, userId))[0];
+    expect(entrada.modo).toBe("aleatorio");
+    expect(entrada.placar?.percentualTotal).toBe(100);
   });
 
   it("listarHistorico ordena da mais recente para a mais antiga", async () => {

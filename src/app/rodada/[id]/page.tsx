@@ -31,8 +31,8 @@ interface QuestaoCliente {
 }
 
 /** Presente na resposta da API só no modo prática, só depois de responder
- * (nunca no modo prova — lá a explicação só aparece depois que a rodada
- * inteira encerra, na tela de resultado). */
+ * (nunca nos modos avaliativos — neles, a explicação só aparece depois que
+ * a rodada inteira encerra, na tela de resultado). */
 interface FeedbackResposta {
   correta: Letra;
   explicacoes: Record<Letra, string>;
@@ -40,7 +40,7 @@ interface FeedbackResposta {
 
 interface EstadoRodada {
   rodadaId: number;
-  modo: "pratica" | "prova";
+  modo: "pratica" | "aleatorio" | "prova";
   status: "em_andamento" | "finalizada";
   totalQuestoes: number;
   limiteSegundos: number | null;
@@ -119,11 +119,12 @@ export default function TelaRodada() {
     mostradaEm.current = Date.now();
   }, [carregar, concluirRodadaEncerrada]);
 
-  // Em prova ativa e visível, sincroniza com o relógio autoritativo do
-  // servidor. Prática não possui limite e evolui pelas respostas das ações.
+  // Em modo avaliativo ativo e visível, sincroniza com o relógio
+  // autoritativo do servidor. Prática não possui limite e evolui pelas
+  // respostas das ações.
   useEffect(() => {
     if (
-      estado?.modo !== "prova" ||
+      (estado?.modo !== "prova" && estado?.modo !== "aleatorio") ||
       estado.status !== "em_andamento" ||
       estado.encerrada ||
       finalizando.current
@@ -171,7 +172,7 @@ export default function TelaRodada() {
         return atualizado;
       });
       // Presente só quando acabou de responder no modo prática; ausente em
-      // qualquer navegação (`destino`) ou no modo prova — o que limpa o
+      // qualquer navegação (`destino`) ou modo avaliativo — o que limpa o
       // painel de feedback assim que o candidato sai da questão.
       setFeedback(corpoResposta.feedback ?? null);
       mostradaEm.current = Date.now();
@@ -249,7 +250,7 @@ export default function TelaRodada() {
           <span className="mono texto-fraco">
             Questão {estado.indiceAtual + 1}/{estado.totalQuestoes}
           </span>
-          {estado.modo === "prova" ? (
+          {estado.modo === "prova" || estado.modo === "aleatorio" ? (
             <Cronometro
               segundosIniciais={estado.restanteSegundos ?? 0}
               sentido="regressivo"

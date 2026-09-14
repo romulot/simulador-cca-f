@@ -24,9 +24,8 @@ export interface EntradaHistorico {
   modo: Modo | null;
   placar: Placar | null;
   esgotouTempo: boolean;
-  /** Nomes distintos dos simulados da rodada, em ordem alfabética; só faz
-   * sentido no modo prática (no modo prova é sempre o corpus inteiro sob os
-   * pesos oficiais, não distingue nada). Vazio nas entradas com erro. */
+  /** Nomes distintos dos simulados da rodada, em ordem alfabética; usados
+   * como rótulo somente no modo prática. Vazio nas entradas com erro. */
   origens: string[];
   /** Motivo de a entrada não ser abrível; `null` quando está tudo certo. */
   erro: string | null;

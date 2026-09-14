@@ -1,4 +1,4 @@
-/** `POST /api/rodadas` — cria uma rodada nova (prática ou prova).
+/** `POST /api/rodadas` — cria uma rodada nova (prática, aleatória ou prova).
  *
  * Modo prática aceita três formas de selecionar as questões (exatamente
  * uma por requisição):
@@ -18,6 +18,10 @@
  * domínio, método do maior resto, déficit nunca redistribuído) sobre TODO o
  * corpus válido disponível.
  *
+ * Modo aleatório: recebe `{ modo: "aleatorio", quantidade: number }` e
+ * amostra, sem reposição nem pesos, todo o corpus válido. É avaliativo como
+ * a prova (sem feedback durante a rodada) e recebe dois minutos por questão.
+ *
  * Em todos os casos, grava a rodada via `repositorioRodadas.criarRodada`
  * (associada ao usuário da sessão) e devolve só a PRIMEIRA questão, já
  * sanitizada (`paraQuestaoCliente` — nunca a resposta certa).
@@ -29,7 +33,14 @@ import { obterConexao } from "@/db/conexao";
 import { carregarRodada, criarRodada } from "@/db/repositorioRodadas";
 import { respostasBrutas } from "@/db/repositorioAprendizado";
 import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
-import { criarRngPadrao, embaralhar, LIMITE_SEGUNDOS, pool, sortear } from "@/domain/sorteio";
+import {
+  criarRngPadrao,
+  embaralhar,
+  LIMITE_SEGUNDOS,
+  pool,
+  SEGUNDOS_POR_QUESTAO_AVALIATIVA,
+  sortear,
+} from "@/domain/sorteio";
 import {
   QUANTIDADE_PRATICAR_PADRAO,
   questoesEmRevisao,
@@ -67,8 +78,8 @@ export async function POST(request: Request): Promise<Response> {
     return respostaErro(400, "'modo' é obrigatório");
   }
   const modo = (corpo as { modo: unknown }).modo;
-  if (modo !== "pratica" && modo !== "prova") {
-    return respostaErro(400, "'modo' deve ser 'pratica' ou 'prova'");
+  if (modo !== "pratica" && modo !== "prova" && modo !== "aleatorio") {
+    return respostaErro(400, "'modo' deve ser 'pratica', 'aleatorio' ou 'prova'");
   }
 
   const paresDisponiveis = descobrir();
@@ -78,7 +89,24 @@ export async function POST(request: Request): Promise<Response> {
   let limiteSegundos: number | null;
   let composicaoResposta: ComposicaoResposta | null = null;
 
-  if (modo === "prova") {
+  if (modo === "aleatorio") {
+    const corpoObj = corpo as Record<string, unknown>;
+    const quantidade = corpoObj.quantidade;
+    if (typeof quantidade !== "number" || !Number.isInteger(quantidade) || quantidade <= 0) {
+      return respostaErro(400, "'quantidade' deve ser um inteiro positivo");
+    }
+
+    const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes);
+    if (validas.length === 0) {
+      return respostaErro(422, "nenhuma questão disponível para montar a rodada aleatória");
+    }
+    if (quantidade > validas.length) {
+      return respostaErro(400, `'quantidade' não pode exceder ${validas.length}`);
+    }
+
+    questoes = embaralhar(validas, rng).slice(0, quantidade);
+    limiteSegundos = quantidade * SEGUNDOS_POR_QUESTAO_AVALIATIVA;
+  } else if (modo === "prova") {
     const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes);
     const poolPorDominio = pool(validas);
     const resultado = sortear(poolPorDominio, rng);

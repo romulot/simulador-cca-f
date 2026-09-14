@@ -1,6 +1,6 @@
 "use client";
 
-/** Tela de menu — três caminhos (praticar, prova, histórico), cada um com
+/** Tela de menu — caminhos de prática, avaliação e histórico, cada um com
  * contagem dinâmica e desabilitado com motivo quando não há conteúdo
  * utilizável. Painel "última rodada" reaproveita a mesma formatação da
  * linha de histórico. */
@@ -26,7 +26,7 @@ interface TopicoForte {
 interface EntradaHistoricoResumo {
   id: number;
   quando: string | null;
-  modo: "pratica" | "prova" | null;
+  modo: "pratica" | "aleatorio" | "prova" | null;
   placar: {
     total: number;
     respondidas: number;
@@ -46,6 +46,9 @@ export default function Menu() {
   const [totalRodadas, setTotalRodadas] = useState(0);
   const [iniciandoProva, setIniciandoProva] = useState(false);
   const [erroProva, setErroProva] = useState<string | null>(null);
+  const [quantidadeAleatoria, setQuantidadeAleatoria] = useState("10");
+  const [iniciandoAleatorio, setIniciandoAleatorio] = useState(false);
+  const [erroAleatorio, setErroAleatorio] = useState<string | null>(null);
   const [emRevisao, setEmRevisao] = useState(0);
   const [iniciandoRevisao, setIniciandoRevisao] = useState(false);
   const [erroRevisao, setErroRevisao] = useState<string | null>(null);
@@ -124,6 +127,40 @@ export default function Menu() {
     }
   }
 
+  async function iniciarAleatorio() {
+    const quantidade = Number(quantidadeAleatoria);
+    if (
+      !Number.isInteger(quantidade) ||
+      quantidade <= 0 ||
+      (totais !== null && quantidade > totais.questoes)
+    ) {
+      setErroAleatorio(
+        totais ? `Informe um número entre 1 e ${totais.questoes}.` : "Informe um número válido.",
+      );
+      return;
+    }
+
+    setIniciandoAleatorio(true);
+    setErroAleatorio(null);
+    try {
+      const resposta = await fetch("/api/rodadas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ modo: "aleatorio", quantidade }),
+      });
+      const corpo = await resposta.json();
+      if (!resposta.ok) {
+        setErroAleatorio(corpo.erro ?? "não foi possível iniciar o modo aleatório");
+        setIniciandoAleatorio(false);
+        return;
+      }
+      router.push(`/rodada/${corpo.rodadaId}`);
+    } catch {
+      setErroAleatorio("falha de rede ao iniciar o modo aleatório");
+      setIniciandoAleatorio(false);
+    }
+  }
+
   const carregando = totais === null;
   const semConteudo = totais !== null && totais.paresValidos === 0;
 
@@ -186,6 +223,49 @@ export default function Menu() {
               {erroProva}
             </p>
           )}
+
+          <div className="painel pilha" style={{ padding: "0.85rem" }}>
+            <strong>Modo aleatório</strong>
+            <div className="linha" style={{ alignItems: "end" }}>
+              <div style={{ flex: 1 }}>
+                <label
+                  className="texto-pequeno texto-fraco"
+                  htmlFor="quantidade-aleatoria"
+                >
+                  Número de questões
+                </label>
+                <input
+                  id="quantidade-aleatoria"
+                  type="number"
+                  className="campo"
+                  min={1}
+                  max={totais?.questoes}
+                  step={1}
+                  value={quantidadeAleatoria}
+                  disabled={semConteudo || iniciandoAleatorio}
+                  onChange={(evento) => setQuantidadeAleatoria(evento.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="botao"
+                disabled={semConteudo || iniciandoAleatorio}
+                onClick={iniciarAleatorio}
+              >
+                {iniciandoAleatorio ? "Sorteando…" : "Começar"}
+              </button>
+            </div>
+            {!carregando && (
+              <span className="texto-pequeno texto-fraco">
+                Escolha de 1 a {totais.questoes}; 2 min por questão e correção ao finalizar.
+              </span>
+            )}
+            {erroAleatorio && (
+              <p className="texto-pequeno" style={{ color: "var(--erro)" }} role="alert">
+                {erroAleatorio}
+              </p>
+            )}
+          </div>
 
           <Link
             href="/historico"
@@ -290,13 +370,19 @@ export default function Menu() {
             <div className="pilha">
               <div className="espaco-entre">
                 <span>
-                  {ultima.modo === "prova" ? "Modo prova" : ultima.origens.join(", ")}
+                  {ultima.modo === "prova"
+                    ? "Modo prova"
+                    : ultima.modo === "aleatorio"
+                      ? "Modo aleatório"
+                      : ultima.origens.join(", ")}
                 </span>
                 <span className="mono">
                   {ultima.placar.acertos}/
-                  {ultima.modo === "prova" ? ultima.placar.total : ultima.placar.respondidas} (
+                  {ultima.modo === "prova" || ultima.modo === "aleatorio"
+                    ? ultima.placar.total
+                    : ultima.placar.respondidas} (
                   {formatarPercentual(
-                    ultima.modo === "prova"
+                    ultima.modo === "prova" || ultima.modo === "aleatorio"
                       ? ultima.placar.percentualTotal
                       : ultima.placar.percentual,
                   )}
@@ -307,7 +393,9 @@ export default function Menu() {
                 fracao={
                   ultima.placar.total > 0
                     ? ultima.placar.acertos /
-                      (ultima.modo === "prova" ? ultima.placar.total : ultima.placar.respondidas || 1)
+                      (ultima.modo === "prova" || ultima.modo === "aleatorio"
+                        ? ultima.placar.total
+                        : ultima.placar.respondidas || 1)
                     : 0
                 }
               />

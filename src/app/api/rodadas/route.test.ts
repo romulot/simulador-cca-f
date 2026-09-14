@@ -87,6 +87,51 @@ describe("POST /api/rodadas", () => {
     expect(somaCotas).toBe(60);
   });
 
+  it("modo aleatório cria a quantidade exata sem repetição nem vazamento de gabarito", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "aleatorio", quantidade: 25 }));
+
+    expect(resposta.status).toBe(201);
+    const corpo = await resposta.json();
+    expect(corpo.modo).toBe("aleatorio");
+    expect(corpo.totalQuestoes).toBe(25);
+    expect(corpo.limiteSegundos).toBe(25 * 2 * 60);
+    expect(corpo.composicao).toBeNull();
+    expect(corpo.questaoAtual).not.toHaveProperty("correta");
+    expect(corpo.questaoAtual).not.toHaveProperty("explicacoes");
+
+    const { carregarRodada } = await import("@/db/repositorioRodadas");
+    const { obterConexao } = await import("@/db/conexao");
+    const persistida = (await carregarRodada(await obterConexao(), corpo.rodadaId, userId))!;
+    const chaves = persistida.estado.questoes.map((q) => `${q.origem}#${q.numero}`);
+    expect(new Set(chaves).size).toBe(25);
+  });
+
+  it("modo aleatório rejeita quantidade ausente, não inteira ou não positiva", async () => {
+    const { POST } = await import("./route");
+    for (const corpo of [
+      { modo: "aleatorio" },
+      { modo: "aleatorio", quantidade: 0 },
+      { modo: "aleatorio", quantidade: -1 },
+      { modo: "aleatorio", quantidade: 1.5 },
+      { modo: "aleatorio", quantidade: "10" },
+    ]) {
+      const resposta = await POST(requisicao(corpo));
+      expect(resposta.status).toBe(400);
+    }
+  });
+
+  it("modo aleatório rejeita quantidade acima do corpus e informa o limite atual", async () => {
+    const { descobrir } = await import("@/lib/catalogo");
+    const { POST } = await import("./route");
+    const total = descobrir().filter((p) => p.erro === null).flatMap((p) => p.questoes).length;
+    const resposta = await POST(requisicao({ modo: "aleatorio", quantidade: total + 1 }));
+
+    expect(resposta.status).toBe(400);
+    const corpo = await resposta.json();
+    expect(corpo.erro).toContain(String(total));
+  });
+
   it("modo pratica com 'topicoId' seleciona só questões daquele tópico", async () => {
     const { POST } = await import("./route");
     const resposta = await POST(requisicao({ modo: "pratica", topicoId: "hooks", quantidade: 3 }));

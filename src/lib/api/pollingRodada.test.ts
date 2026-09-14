@@ -29,6 +29,23 @@ describe("iniciarPollingRodada", () => {
     parar();
   });
 
+  it("sincroniza modo aleatório ativo", async () => {
+    vi.useFakeTimers();
+    const aleatorioAtivo = { ...PROVA_ATIVA, modo: "aleatorio" as const };
+    const sincronizar = vi.fn().mockResolvedValue(aleatorioAtivo);
+    const parar = iniciarPollingRodada({
+      obterEstado: () => aleatorioAtivo,
+      sincronizar,
+      aoEncerrar: vi.fn(),
+      abaVisivel: () => true,
+    });
+
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(sincronizar).toHaveBeenCalledOnce();
+    parar();
+  });
+
   it("sincroniza prova ativa quando a aba está visível", async () => {
     vi.useFakeTimers();
     const sincronizar = vi.fn().mockResolvedValue(PROVA_ATIVA);

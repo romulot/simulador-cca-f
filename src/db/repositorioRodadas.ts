@@ -1,4 +1,4 @@
-/** Persistência de uma rodada (prática ou prova) em Postgres.
+/** Persistência de uma rodada (prática, aleatória ou prova) em Postgres.
  *
  * Duas responsabilidades, refletindo o schema (`migrations/001_initial.sql`):
  * `criarRodada` grava o snapshot AUTO-CONTIDO inicial (cada questão com seu

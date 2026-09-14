@@ -38,7 +38,7 @@ async function novaRodada(
   questoes: Questao[],
   limiteSegundos: number | null = null,
   dono = userId,
-  modo: "pratica" | "prova" = "pratica",
+  modo: "pratica" | "aleatorio" | "prova" = "pratica",
 ) {
   const { obterConexao } = await import("@/db/conexao");
   const { criarRodada } = await import("@/db/repositorioRodadas");
@@ -115,6 +115,28 @@ describe("POST /api/rodadas/:id/questoes/:indice — responder", () => {
     const { obterConexao } = await import("@/db/conexao");
     const persistida = (await carregarRodada(await obterConexao(), id, userId))!;
     expect(persistida.estado.tempos[0]).toBeCloseTo(12.5);
+  });
+
+  it("modo aleatório avança e nunca inclui feedback", async () => {
+    const { id } = await novaRodada(
+      [questaoFake(1, "A"), questaoFake(2, "B")],
+      null,
+      userId,
+      "aleatorio",
+    );
+    const { POST } = await import("./route");
+
+    const resposta = await POST(
+      post("http://localhost", { resposta: "C", segundosGastos: 4 }),
+      { params: Promise.resolve({ id: String(id), indice: "0" }) },
+    );
+
+    expect(resposta.status).toBe(200);
+    const corpo = await resposta.json();
+    expect(corpo.indiceAtual).toBe(1);
+    expect(corpo.respostas).toEqual(["C", null]);
+    expect(corpo.feedback).toBeUndefined();
+    expect(corpo.questaoAtual).not.toHaveProperty("correta");
   });
 
   it("modo prática: grava a resposta e acumula segundosGastos, mas NÃO avança — devolve feedback (correta + explicações)", async () => {

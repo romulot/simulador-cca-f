@@ -33,6 +33,8 @@ describe("migrate", () => {
       "004_arquivada_rodadas.sql",
       "005_perfil_candidato.sql",
       "006_arquetipos_questoes_rodada.sql",
+      "007_acesso_restrito.sql",
+      "008_modo_aleatorio.sql",
     ]);
   });
 
@@ -113,7 +115,30 @@ describe("migrate", () => {
       "criado_em",
       "data_prova",
       "minutos_sessao_padrao",
+      "acesso_ativo",
     ]);
+  });
+
+  it("'rodadas.modo' aceita aleatorio e preserva os modos anteriores", async () => {
+    await migrar(pool);
+    const userId = await criarUsuarioTeste(pool);
+
+    for (const modo of ["pratica", "aleatorio", "prova"]) {
+      await expect(
+        pool.query(
+          `INSERT INTO rodadas (user_id, modo, iniciada_em, status, indice_atual)
+           VALUES ($1, $2, '2026-09-14T10:00:00', 'em_andamento', 0)`,
+          [userId, modo],
+        ),
+      ).resolves.not.toThrow();
+    }
+    await expect(
+      pool.query(
+        `INSERT INTO rodadas (user_id, modo, iniciada_em, status, indice_atual)
+         VALUES ($1, 'invalido', '2026-09-14T10:00:00', 'em_andamento', 0)`,
+        [userId],
+      ),
+    ).rejects.toMatchObject({ code: "23514" });
   });
 
   it("respeita ON DELETE CASCADE: apagar a rodada apaga as questões dela", async () => {

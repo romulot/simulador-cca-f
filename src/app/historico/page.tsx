@@ -11,7 +11,7 @@ import { formatarData, formatarPercentual, mmss } from "@/lib/formatacao";
 interface EntradaHistorico {
   id: number;
   quando: string | null;
-  modo: "pratica" | "prova" | null;
+  modo: "pratica" | "aleatorio" | "prova" | null;
   placar: {
     total: number;
     respondidas: number;
@@ -59,10 +59,11 @@ export default function Historico() {
                 </div>
               );
             }
-            const denominador =
-              entrada.modo === "prova" ? entrada.placar.total : entrada.placar.respondidas;
-            const percentual =
-              entrada.modo === "prova" ? entrada.placar.percentualTotal : entrada.placar.percentual;
+            const avaliativo = entrada.modo === "prova" || entrada.modo === "aleatorio";
+            const denominador = avaliativo ? entrada.placar.total : entrada.placar.respondidas;
+            const percentual = avaliativo
+              ? entrada.placar.percentualTotal
+              : entrada.placar.percentual;
             return (
               <Link
                 key={entrada.id}
@@ -72,7 +73,11 @@ export default function Historico() {
               >
                 <div className="espaco-entre">
                   <span>
-                    {entrada.modo === "prova" ? "Modo prova" : entrada.origens.join(", ")}
+                    {entrada.modo === "prova"
+                      ? "Modo prova"
+                      : entrada.modo === "aleatorio"
+                        ? "Modo aleatório"
+                        : entrada.origens.join(", ")}
                   </span>
                   {entrada.esgotouTempo && <span className="badge badge-erro">⏱ esgotado</span>}
                 </div>
