@@ -95,9 +95,7 @@ function FormularioLogin() {
           </button>
         </form>
 
-        <p className="texto-pequeno texto-fraco">
-          Ainda não possui conta? <Link href="/cadastro">Criar conta</Link>
-        </p>
+        <p className="texto-pequeno texto-fraco">Acesso restrito a contas autorizadas.</p>
       </div>
     </main>
   );

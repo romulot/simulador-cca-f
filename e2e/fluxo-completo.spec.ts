@@ -1,6 +1,8 @@
 import { expect, type Page, test } from "@playwright/test";
+import bcrypt from "bcryptjs";
+import { Pool } from "pg";
 
-/** Fluxo completo: cadastro → menu → seleção → rodada → resultado →
+/** Fluxo completo: login → menu → seleção → rodada → resultado →
  * histórico.
  *
  * Cobre o caminho feliz do app inteiro numa sessão de navegador real —
@@ -9,19 +11,43 @@ import { expect, type Page, test } from "@playwright/test";
  * ponta a ponta, incluindo o que só existe no navegador (navegação por
  * clique, atalhos de teclado, confirmação de finalização).
  *
- * Cada teste cadastra sua PRÓPRIA conta (email descartável) em vez de
- * reaproveitar uma sessão fixa: como o app agora exige login, isso também
- * garante isolamento entre execuções sem precisar limpar o banco entre
- * elas (histórico de uma conta nova começa sempre vazio).
+ * O cadastro público é fechado. Cada teste provisiona diretamente no banco
+ * local sua própria conta autorizada e a remove ao terminar, preservando o
+ * isolamento sem abrir uma porta de cadastro na aplicação.
  */
 
-async function cadastrarNovoUsuario(page: Page): Promise<void> {
-  const email = `e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@exemplo.invalido`;
-  await page.goto("/cadastro");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill("senha-de-teste-123");
-  await page.getByLabel("Confirmar senha").fill("senha-de-teste-123");
-  await page.getByRole("button", { name: "Criar conta" }).click();
+const connectionString =
+  process.env.DATABASE_URL ?? "postgres://postgres:simulador@localhost:5433/simulador";
+let emailTeste = "";
+const senhaTeste = "senha-de-teste-123";
+
+test.beforeEach(async () => {
+  emailTeste = `teste-e2e-${Date.now()}-${Math.random().toString(36).slice(2)}@exemplo.invalido`;
+  const pool = new Pool({ connectionString });
+  try {
+    await pool.query(
+      "INSERT INTO usuarios (email, senha_hash, acesso_ativo) VALUES ($1, $2, TRUE)",
+      [emailTeste, await bcrypt.hash(senhaTeste, 4)],
+    );
+  } finally {
+    await pool.end();
+  }
+});
+
+test.afterEach(async () => {
+  const pool = new Pool({ connectionString });
+  try {
+    await pool.query("DELETE FROM usuarios WHERE email = $1", [emailTeste]);
+  } finally {
+    await pool.end();
+  }
+});
+
+async function entrar(page: Page): Promise<void> {
+  await page.goto("/login");
+  await page.getByLabel("Email").fill(emailTeste);
+  await page.getByLabel("Senha", { exact: true }).fill(senhaTeste);
+  await page.getByRole("button", { name: "Entrar" }).click();
   await page.waitForURL("/");
 }
 
@@ -32,8 +58,8 @@ test("menu → praticar → responder → finalizar → resultado → histórico
   });
   page.on("pageerror", (err) => erros.push(String(err)));
 
-  await test.step("cadastro autentica e leva ao menu", async () => {
-    await cadastrarNovoUsuario(page);
+  await test.step("login autorizado leva ao menu", async () => {
+    await entrar(page);
     await expect(page.getByRole("heading", { name: "Simulador CCA-F" })).toBeVisible();
     await expect(page.getByText(/simulados,.*questões/)).toBeVisible();
   });
@@ -98,7 +124,7 @@ test("menu → praticar → responder → finalizar → resultado → histórico
 });
 
 test("modo prova sorteia 60 questões e mostra o cronômetro regressivo", async ({ page }) => {
-  await cadastrarNovoUsuario(page);
+  await entrar(page);
   await page.getByRole("button", { name: /Modo prova/ }).click();
   await page.waitForURL(/\/rodada\/\d+/);
   await expect(page.getByText("Questão 1/60")).toBeVisible();
@@ -107,7 +133,7 @@ test("modo prova sorteia 60 questões e mostra o cronômetro regressivo", async 
 });
 
 test("teclado: responder com a tecla A e navegar com as setas", async ({ page }) => {
-  await cadastrarNovoUsuario(page);
+  await entrar(page);
   await page.goto("/selecao");
   await page.locator("input[type=checkbox]:not([disabled])").first().check();
   await page.getByRole("button", { name: "Começar" }).click();

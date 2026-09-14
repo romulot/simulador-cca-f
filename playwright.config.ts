@@ -10,10 +10,9 @@ import { defineConfig } from "@playwright/test";
  *
  * Usa o mesmo Postgres local dos testes unitários (`DATABASE_URL` — ver
  * `vitest.config.mts` e README, seção "Desenvolvimento local"). Não há mais
- * arquivo de banco a apagar entre execuções: cada teste cadastra sua
- * própria conta com email descartável (ver `e2e/fluxo-completo.spec.ts`),
- * então dados de execuções anteriores nunca aparecem no histórico de uma
- * conta nova.
+ * arquivo de banco a apagar entre execuções: cada teste provisiona no banco
+ * local sua própria conta autorizada e a remove no teardown (ver
+ * `e2e/fluxo-completo.spec.ts`).
  */
 export default defineConfig({
   testDir: "./e2e",

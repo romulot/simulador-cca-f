@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { NOME_COOKIE_SESSAO } from "@/lib/auth/sessao";
 import { limparRateLimitParaTeste } from "@/lib/auth/rateLimit";
+import { obterConexao } from "@/db/conexao";
+import { criarUsuario } from "@/db/repositorioUsuarios";
+import { hashSenha } from "@/lib/auth/senha";
 
 beforeEach(limparRateLimitParaTeste);
 
@@ -14,13 +17,13 @@ function post(url: string, corpo: unknown): Request {
 }
 
 function emailUnico(): string {
-  return `login-${process.pid}-${Date.now()}-${Math.random()}@exemplo.invalido`;
+  return `teste-login-${process.pid}-${Date.now()}-${Math.random()}@exemplo.invalido`;
 }
 
 async function registrar(email: string, senha: string) {
-  const { POST } = await import("../registro/route");
-  const resposta = await POST(post("http://localhost/api/auth/registro", { email, senha }));
-  expect(resposta.status).toBe(201);
+  const pool = await obterConexao();
+  const usuario = await criarUsuario(pool, email, await hashSenha(senha));
+  await pool.query("UPDATE usuarios SET acesso_ativo = TRUE WHERE id = $1", [usuario.id]);
 }
 
 describe("POST /api/auth/login", () => {

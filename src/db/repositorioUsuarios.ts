@@ -1,4 +1,4 @@
-/** Persistência de usuários (cadastro/login). */
+/** Persistência de usuários autorizados e autenticação. */
 import type { Pool } from "pg";
 
 export interface Usuario {
@@ -43,7 +43,7 @@ export async function criarUsuario(
 
 export async function buscarUsuarioPorEmail(pool: Pool, email: string): Promise<Usuario | null> {
   const resultado = await pool.query<{ id: number; email: string; senha_hash: string }>(
-    "SELECT id, email, senha_hash FROM usuarios WHERE email = $1",
+    "SELECT id, email, senha_hash FROM usuarios WHERE email = $1 AND acesso_ativo = TRUE",
     [normalizarEmail(email)],
   );
   const linha = resultado.rows[0];
