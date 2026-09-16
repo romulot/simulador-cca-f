@@ -9,8 +9,15 @@
  */
 import { placar as placarDominio, relogioInerte, type Modo, type Placar } from "@/domain/rodada";
 import { diagnosticarErros, type DiagnosticoRodada } from "@/domain/diagnosticoErro";
+import type { CursoId } from "@/lib/catalogo";
 import type { AlternativasPorLetra, Letra, MetadadosQuestao } from "@/lib/parser/tipos";
 import type { ComposicaoPersistida, RodadaPersistida } from "@/db/repositorioRodadas";
+
+/** Rótulo de `origem` devolvido ao cliente no lugar do nome real de arquivo
+ * quando `curso === "exame-avancado"` — o nome real segue o padrão
+ * `dominio-N`, que revelaria o domínio da questão tão diretamente quanto o
+ * próprio número. Ver Tarefa 8 do plano Exame Avançado. */
+const ORIGEM_OCULTA = "exame-avancado";
 
 export interface QuestaoDetalhe {
   posicao: number;
@@ -31,6 +38,7 @@ export interface QuestaoDetalhe {
 export interface DetalheRodada {
   id: number;
   modo: Modo;
+  curso: CursoId;
   quando: string; // ISO
   esgotouTempo: boolean;
   placar: Placar;
@@ -53,11 +61,15 @@ export function montarDetalheRodada(persistida: RodadaPersistida): DetalheRodada
 
   const { estado } = persistida;
   const placar = placarDominio(estado, relogioInerte());
+  // Trilha "Exame Avançado" nunca revela domínio ao candidato (decisão de
+  // produto do plano): o dado continua calculado/persistido internamente
+  // (placar, diagnóstico), só não trafega para o cliente nesta trilha.
+  const ocultarDominio = persistida.curso === "exame-avancado";
 
   const questoes: QuestaoDetalhe[] = estado.questoes.map((q, posicao) => ({
     posicao,
-    origem: q.origem,
-    dominio: q.dominio,
+    origem: ocultarDominio ? ORIGEM_OCULTA : q.origem,
+    dominio: ocultarDominio ? null : q.dominio,
     numero: q.numero,
     enunciado: q.enunciado,
     alternativas: q.alternativas,
@@ -82,6 +94,7 @@ export function montarDetalheRodada(persistida: RodadaPersistida): DetalheRodada
   return {
     id: persistida.id,
     modo: estado.modo,
+    curso: persistida.curso,
     quando: persistida.iniciadaEm.toISOString(),
     esgotouTempo: estado.esgotouTempo,
     placar,

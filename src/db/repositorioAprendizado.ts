@@ -10,6 +10,7 @@
 import type { Pool } from "pg";
 
 import type { RespostaBruta } from "@/domain/aprendizado";
+import type { CursoId } from "@/lib/catalogo";
 import type { Letra } from "@/lib/parser/tipos";
 
 interface LinhaRespostaBruta {
@@ -21,6 +22,7 @@ interface LinhaRespostaBruta {
   topicos_json: string;
   arquetipos_json: string;
   rodada_id: number;
+  curso: CursoId;
 }
 
 /** Todas as respostas já dadas por `userId` em rodadas finalizadas, da
@@ -30,7 +32,7 @@ interface LinhaRespostaBruta {
 export async function respostasBrutas(pool: Pool, userId: number): Promise<RespostaBruta[]> {
   const resultado = await pool.query<LinhaRespostaBruta>(
     `SELECT qr.origem, qr.numero, qr.dominio, qr.resposta, qr.correta, qr.topicos_json,
-            qr.arquetipos_json, qr.rodada_id
+            qr.arquetipos_json, qr.rodada_id, r.curso
      FROM questoes_rodada qr
      JOIN rodadas r ON r.id = qr.rodada_id
      WHERE r.user_id = $1 AND r.status = 'finalizada' AND r.arquivada = FALSE AND qr.resposta IS NOT NULL
@@ -50,6 +52,7 @@ export async function respostasBrutas(pool: Pool, userId: number): Promise<Respo
       correta,
       topicos: JSON.parse(linha.topicos_json),
       rodadaId: linha.rodada_id,
+      curso: linha.curso,
       arquetipoMarcado: resposta !== correta ? (arquetipos[resposta] ?? null) : null,
     };
   });

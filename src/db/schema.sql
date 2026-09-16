@@ -50,7 +50,11 @@ CREATE TABLE IF NOT EXISTS rodadas (
   indice_atual INTEGER NOT NULL DEFAULT 0,
   cotas_json TEXT,
   disponivel_json TEXT,
-  deficit_json TEXT
+  deficit_json TEXT,
+  -- Curso da rodada: qual banco de conteúdo ela usa. Ver
+  -- src/db/migrations/009_curso_rodadas.sql e
+  -- src/lib/catalogo/index.ts::CursoId.
+  curso TEXT NOT NULL DEFAULT 'curso-antigo' CHECK (curso IN ('curso-antigo', 'exame-avancado'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_rodadas_user_id ON rodadas (user_id);

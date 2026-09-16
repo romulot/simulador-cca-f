@@ -13,7 +13,7 @@ import { NextResponse } from "next/server";
 import { obterConexao } from "@/db/conexao";
 import { respostasBrutas } from "@/db/repositorioAprendizado";
 import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
-import { descobrir } from "@/lib/catalogo";
+import { CURSOS, descobrir, raizDoCurso, type CursoId } from "@/lib/catalogo";
 import {
   arquetiposMaisFrequentes,
   errosRecorrentes,
@@ -50,28 +50,45 @@ export async function GET(request: Request): Promise<Response> {
     })
     .filter((a): a is NonNullable<typeof a> => a !== null);
 
-  const pares = descobrir();
-  const validas = pares.filter((p) => p.erro === null).flatMap((p) => p.questoes);
-  const porChave = new Map(validas.map((q) => [`${q.origem}#${q.numero}`, q]));
+  // Mapa de busca POR CURSO: `origem`/`numero` só é único dentro de um
+  // mesmo curso (cada um lê sua própria raiz de conteúdo, ver
+  // `@/lib/catalogo::raizDoCurso`) — misturar os dois num único mapa
+  // arriscaria resolver a questão errada se algum dia os nomes colidirem
+  // entre "Curso Antigo" e "Exame Avançado".
+  const porChavePorCurso = new Map(
+    CURSOS.map((curso) => {
+      const validas = descobrir(raizDoCurso(curso))
+        .filter((p) => p.erro === null)
+        .flatMap((p) => p.questoes);
+      return [curso, new Map(validas.map((q) => [`${q.origem}#${q.numero}`, q]))] as const;
+    }),
+  );
 
   const emRevisao = questoesEmRevisao(respostas)
     .map((r) => {
-      const questao = porChave.get(`${r.origem}#${r.numero}`);
+      const questao = porChavePorCurso.get(r.curso)?.get(`${r.origem}#${r.numero}`);
       if (!questao) return null;
-      return montarRevisao(questao, r.ultimaResposta, r.correta);
+      return montarRevisao(questao, r.ultimaResposta, r.correta, r.curso);
     })
     .filter((q): q is NonNullable<typeof q> => q !== null);
 
   return NextResponse.json({ recorrentes, arquetiposFrequentes, emRevisao });
 }
 
-function montarRevisao(questao: Questao, ultimaResposta: Letra, correta: Letra) {
+// Ver `ORIGEM_OCULTA` em `@/lib/api/detalheRodada` — mesma decisão de
+// produto (trilha "Exame Avançado" nunca revela domínio ao candidato),
+// aplicada aqui porque o caderno de erros monta seu próprio payload, sem
+// passar por `montarDetalheRodada`.
+const ORIGEM_OCULTA = "exame-avancado";
+
+function montarRevisao(questao: Questao, ultimaResposta: Letra, correta: Letra, curso: CursoId) {
   const arquetipoId = questao.arquetiposErrados?.[ultimaResposta] ?? null;
   const arquetipo = arquetipoId ? arquetipoPorId(arquetipoId) : undefined;
+  const ocultarDominio = curso === "exame-avancado";
   return {
-    origem: questao.origem,
+    origem: ocultarDominio ? ORIGEM_OCULTA : questao.origem,
     numero: questao.numero,
-    dominio: questao.dominio,
+    dominio: ocultarDominio ? null : questao.dominio,
     enunciado: questao.enunciado,
     alternativas: questao.alternativas,
     correta,

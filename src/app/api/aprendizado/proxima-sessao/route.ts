@@ -14,7 +14,7 @@ import { obterConexao } from "@/db/conexao";
 import { obterPerfil } from "@/db/repositorioUsuarios";
 import { respostasBrutas } from "@/db/repositorioAprendizado";
 import { obterUsuarioIdDaSessao } from "@/lib/auth/sessao";
-import { descobrir } from "@/lib/catalogo";
+import { CURSOS, descobrir, raizDoCurso } from "@/lib/catalogo";
 import { estatisticasPorTopico } from "@/domain/aprendizado";
 import {
   contarDisponivelPorTopico,
@@ -51,9 +51,16 @@ export async function GET(request: Request): Promise<Response> {
 
   const db = await obterConexao();
   const respostas = await respostasBrutas(db, userId);
-  const pares = descobrir();
 
-  const validas = pares.filter((p) => p.erro === null).flatMap((p) => p.questoes);
+  // Disponibilidade por tópico soma os dois cursos: o catálogo de tópicos
+  // (`TOPICOS`) é o mesmo para "Curso Antigo" e "Exame Avançado" (mesmo
+  // exame-alvo), então uma questão de qualquer um dos dois conta para
+  // cobrir aquele tópico.
+  const validas = CURSOS.flatMap((curso) =>
+    descobrir(raizDoCurso(curso))
+      .filter((p) => p.erro === null)
+      .flatMap((p) => p.questoes),
+  );
   const disponivelPorTopico = contarDisponivelPorTopico(validas);
   const estatisticas = estatisticasPorTopico(respostas);
 

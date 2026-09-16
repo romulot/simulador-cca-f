@@ -35,6 +35,12 @@ function origensDistintas(origens: string[]): string[] {
   return [...new Set(origens)].sort();
 }
 
+// Ver `ORIGEM_OCULTA` em `@/lib/api/detalheRodada` — mesma decisão de
+// produto (trilha "Exame Avançado" nunca revela domínio ao candidato): o
+// nome de arquivo real segue o padrão `dominio-N`, que revelaria o domínio
+// tão diretamente quanto exibir "Domínio N".
+const ORIGEM_OCULTA = "exame-avancado";
+
 /** Uma entrada do histórico a partir do id, com leitura defensiva: qualquer
  * erro de dado (não de programação) vira `erro` preenchido, não exceção. */
 export async function carregarEntradaHistorico(
@@ -70,7 +76,10 @@ export async function carregarEntradaHistorico(
       modo: persistida.estado.modo,
       placar: p,
       esgotouTempo: persistida.estado.esgotouTempo,
-      origens: origensDistintas(persistida.estado.questoes.map((q) => q.origem)),
+      origens:
+        persistida.curso === "exame-avancado"
+          ? [ORIGEM_OCULTA]
+          : origensDistintas(persistida.estado.questoes.map((q) => q.origem)),
       erro: null,
     };
   } catch (erro) {

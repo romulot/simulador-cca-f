@@ -15,11 +15,32 @@ import { DOMINIO_RE } from "@/lib/parser/parser";
 import { carregarPar } from "@/lib/parser/parser";
 import { FormatoInvalido } from "@/lib/parser/erros";
 import type { Questao } from "@/lib/parser/tipos";
+import { CURSOS, cursoIdValido, type CursoId } from "./curso";
+
+// Reexportado para quem já importa de `@/lib/catalogo` (código de
+// servidor). Componentes cliente devem importar de `@/lib/catalogo/curso`
+// diretamente — este módulo (`index.ts`) importa `node:fs` no topo, e um
+// import de valor daqui puxaria esse módulo inteiro (inclusive `node:fs`)
+// para o bundle do navegador, mesmo usando só `CursoId`/`CURSOS`.
+export { CURSOS, cursoIdValido, type CursoId };
 
 // Pares sem domínio identificável vão para o fim da lista.
 const SEM_DOMINIO = Number.MAX_SAFE_INTEGER;
 
 const RAIZ_PADRAO = join(process.cwd(), "content/simulados");
+
+/** Raiz de conteúdo por curso — único lugar do módulo que sabe onde cada
+ * curso mora no disco; `carregarPar`/`validarDentroDoConteudo` (parser.ts)
+ * têm a lista paralela de raízes permitidas por segurança, que precisa
+ * continuar batendo com este mapa. */
+const RAIZ_POR_CURSO: Record<CursoId, string> = {
+  "curso-antigo": RAIZ_PADRAO,
+  "exame-avancado": join(process.cwd(), "content/exame-avancado"),
+};
+
+export function raizDoCurso(curso: CursoId): string {
+  return RAIZ_POR_CURSO[curso];
+}
 
 /** Um par simulado/gabarito descoberto no disco, válido ou não. */
 export interface Par {

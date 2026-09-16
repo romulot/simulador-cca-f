@@ -11,6 +11,13 @@
  */
 import type { Questao } from "@/lib/parser/tipos";
 
+// Compartilhado entre os dois cursos (`curso-antigo` e `exame-avancado`,
+// ver `@/lib/catalogo::CursoId`) de propósito — o exame oficial publica um
+// único peso por domínio, independente de qual banco de questões o
+// candidato está praticando. Hoje bate, por coincidência de fonte, com os
+// pesos declarados em `exame-avancado/README.md`; se algum dia divergir,
+// esta tabela precisará virar por-curso — não assuma que a coincidência é
+// garantida para sempre.
 export const PESOS: Record<number, number> = { 1: 27, 2: 18, 3: 20, 4: 20, 5: 15 };
 export const TOTAL_PROVA = 60;
 export const LIMITE_SEGUNDOS = 120 * 60;

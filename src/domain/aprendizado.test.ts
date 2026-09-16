@@ -21,6 +21,7 @@ function resposta(parcial: Partial<RespostaBruta> & { origem: string; numero: nu
     correta: "A",
     topicos: ["Hooks"],
     rodadaId: 1,
+    curso: "curso-antigo",
     arquetipoMarcado: null,
     ...parcial,
   };
@@ -170,7 +171,7 @@ describe("questoesEmRevisao", () => {
   it("questão errada e nunca mais respondida fica em revisão", () => {
     const respostas = [resposta({ origem: "a", numero: 1, resposta: "B", correta: "A", rodadaId: 1 })];
     expect(questoesEmRevisao(respostas)).toEqual([
-      { origem: "a", numero: 1, ultimaResposta: "B", correta: "A" },
+      { origem: "a", numero: 1, curso: "curso-antigo", ultimaResposta: "B", correta: "A" },
     ]);
   });
 
@@ -188,7 +189,7 @@ describe("questoesEmRevisao", () => {
       resposta({ origem: "a", numero: 1, resposta: "C", correta: "A", rodadaId: 2 }),
     ];
     expect(questoesEmRevisao(respostas)).toEqual([
-      { origem: "a", numero: 1, ultimaResposta: "C", correta: "A" },
+      { origem: "a", numero: 1, curso: "curso-antigo", ultimaResposta: "C", correta: "A" },
     ]);
   });
 });

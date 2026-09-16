@@ -332,26 +332,29 @@ export function parseGabarito(texto: string, arquivo = "<memória>"): QuestaoGab
   return resultado;
 }
 
-// Raiz do conteúdo permitido, resolvida a partir do cwd do processo (que o
-// Next.js — em dev, build e start — sempre mantém como a raiz do projeto;
+// Raízes de conteúdo permitidas, resolvidas a partir do cwd do processo (que
+// o Next.js — em dev, build e start — sempre mantém como a raiz do projeto;
 // é a mesma convenção já usada em parser.test.ts). Evita hardcode de caminho
 // de máquina e serve de base para a guarda de path traversal abaixo.
-// `realpathSync` (em vez de `resolve`) segue symlinks, para que a raiz
+// `realpathSync` (em vez de `resolve`) segue symlinks, para que cada raiz
 // comparada abaixo já esteja no mesmo espaço "resolvido" do caminho do
-// arquivo.
-const CONTEUDO_RAIZ = realpathSync(resolve(process.cwd(), "content/simulados")) + sep;
+// arquivo. Lista fixa no código (nunca construída a partir de input externo)
+// — uma raiz por trilha de conteúdo (ver `lib/catalogo/index.ts`).
+const CONTEUDO_RAIZES = ["content/simulados", "content/exame-avancado"].map(
+  (raiz) => realpathSync(resolve(process.cwd(), raiz)) + sep,
+);
 
-/** Garante que `caminho`, depois de resolvido, fica dentro de
- * `content/simulados/`. Usa `realpathSync` (em vez de `resolve`) para que
- * symlinks dentro do diretório de conteúdo apontando para fora sejam
+/** Garante que `caminho`, depois de resolvido, fica dentro de alguma das
+ * raízes de `CONTEUDO_RAIZES`. Usa `realpathSync` (em vez de `resolve`) para
+ * que symlinks dentro do diretório de conteúdo apontando para fora sejam
  * seguidos antes da comparação — do contrário, um symlink escaparia da
  * checagem `startsWith` mas ainda seria seguido por `readFileSync`. Lança
  * `FormatoInvalido` (reaproveitado em vez de um erro dedicado: o chamador de
- * `carregarPar` já trata só esse tipo de erro) se o caminho escapar do
- * diretório de conteúdo permitido. Se `caminho` não existir ou for
- * inacessível, `realpathSync` lança um erro cru do Node (`ENOENT` etc.); esse
- * erro é capturado e relançado como `FormatoInvalido` para preservar o
- * contrato de que toda a superfície pública do módulo só lança esse tipo. */
+ * `carregarPar` já trata só esse tipo de erro) se o caminho escapar de todas
+ * as raízes permitidas. Se `caminho` não existir ou for inacessível,
+ * `realpathSync` lança um erro cru do Node (`ENOENT` etc.); esse erro é
+ * capturado e relançado como `FormatoInvalido` para preservar o contrato de
+ * que toda a superfície pública do módulo só lança esse tipo. */
 function validarDentroDoConteudo(caminho: string): string {
   let resolvido: string;
   try {
@@ -363,7 +366,7 @@ function validarDentroDoConteudo(caminho: string): string {
       "caminho inexistente ou inacessível",
     );
   }
-  if (!resolvido.startsWith(CONTEUDO_RAIZ)) {
+  if (!CONTEUDO_RAIZES.some((raiz) => resolvido.startsWith(raiz))) {
     throw new FormatoInvalido(
       basename(caminho),
       null,

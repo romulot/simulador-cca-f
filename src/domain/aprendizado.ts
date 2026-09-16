@@ -9,6 +9,7 @@
  * este módulo nunca toca o banco nem o filesystem, para poder ser testado
  * só com fixtures em memória.
  */
+import type { CursoId } from "@/lib/catalogo";
 import type { Letra, Questao } from "@/lib/parser/tipos";
 import { embaralhar, type Rng } from "./sorteio";
 import { topicoPorNome } from "./topicos";
@@ -24,6 +25,12 @@ export interface RespostaBruta {
   correta: Letra;
   topicos: string[];
   rodadaId: number;
+  /** Curso de onde a questão veio (ver `@/lib/catalogo::CursoId`) — usado
+   * por quem recompõe o texto da questão a partir de `origem`/`numero`
+   * (ex. `/api/aprendizado/caderno`) para consultar a raiz de conteúdo
+   * certa. As agregações puras deste módulo (por tópico, por domínio)
+   * ignoram este campo de propósito: elas somam as duas trilhas juntas. */
+  curso: CursoId;
   /** Arquétipo do distrator marcado (ver `domain/arquetipos.ts`), só
    * quando `resposta !== correta` E o gabarito já foi tagueado; `null` num
    * acerto ou num gabarito ainda sem a tag daquela alternativa. */
@@ -205,6 +212,7 @@ function ultimaTentativaPorQuestao(respostas: RespostaBruta[]): Map<string, Resp
 export interface QuestaoEmRevisao {
   origem: string;
   numero: number;
+  curso: CursoId;
   ultimaResposta: Letra;
   correta: Letra;
 }
@@ -218,6 +226,7 @@ export function questoesEmRevisao(respostas: RespostaBruta[]): QuestaoEmRevisao[
     .map((r) => ({
       origem: r.origem,
       numero: r.numero,
+      curso: r.curso,
       ultimaResposta: r.resposta,
       correta: r.correta,
     }));

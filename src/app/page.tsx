@@ -10,6 +10,12 @@ import { useRouter } from "next/navigation";
 
 import { Barra } from "@/components/Barra";
 import { formatarData, formatarPercentual, mmss } from "@/lib/formatacao";
+import { CURSOS, type CursoId } from "@/lib/catalogo/curso";
+
+const ROTULO_CURSO: Record<CursoId, string> = {
+  "curso-antigo": "Curso Antigo",
+  "exame-avancado": "Exame Avançado",
+};
 
 interface TotaisCatalogo {
   pares: number;
@@ -41,6 +47,7 @@ interface EntradaHistoricoResumo {
 
 export default function Menu() {
   const router = useRouter();
+  const [curso, setCurso] = useState<CursoId>("curso-antigo");
   const [totais, setTotais] = useState<TotaisCatalogo | null>(null);
   const [ultima, setUltima] = useState<EntradaHistoricoResumo | null>(null);
   const [totalRodadas, setTotalRodadas] = useState(0);
@@ -57,10 +64,12 @@ export default function Menu() {
   const [totalPontosAtencao, setTotalPontosAtencao] = useState(0);
 
   useEffect(() => {
-    fetch("/api/catalogo")
+    fetch(`/api/catalogo?curso=${curso}`)
       .then((r) => r.json())
       .then((corpo) => setTotais(corpo.totais));
+  }, [curso]);
 
+  useEffect(() => {
     fetch("/api/historico")
       .then((r) => r.json())
       .then((corpo) => {
@@ -90,7 +99,7 @@ export default function Menu() {
       const resposta = await fetch("/api/rodadas", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ modo: "pratica", revisao: true }),
+        body: JSON.stringify({ modo: "pratica", revisao: true, curso }),
       });
       const corpo = await resposta.json();
       if (!resposta.ok) {
@@ -112,7 +121,7 @@ export default function Menu() {
       const resposta = await fetch("/api/rodadas", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ modo: "prova" }),
+        body: JSON.stringify({ modo: "prova", curso }),
       });
       const corpo = await resposta.json();
       if (!resposta.ok) {
@@ -146,7 +155,7 @@ export default function Menu() {
       const resposta = await fetch("/api/rodadas", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ modo: "aleatorio", quantidade }),
+        body: JSON.stringify({ modo: "aleatorio", quantidade, curso }),
       });
       const corpo = await resposta.json();
       if (!resposta.ok) {
@@ -185,9 +194,26 @@ export default function Menu() {
           </button>
         </header>
 
+        <div className="painel pilha" role="radiogroup" aria-label="Curso">
+          <div className="linha">
+            {CURSOS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={curso === c}
+                className={`botao ${curso === c ? "botao-primario" : "botao-fantasma"}`}
+                onClick={() => setCurso(c)}
+              >
+                {ROTULO_CURSO[c]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="painel pilha">
           <Link
-            href="/selecao"
+            href={`/selecao?curso=${curso}`}
             className={`botao botao-primario botao-bloco${semConteudo ? " botao-desabilitado" : ""}`}
             aria-disabled={semConteudo}
             tabIndex={semConteudo ? -1 : undefined}
@@ -203,7 +229,7 @@ export default function Menu() {
           </Link>
           {semConteudo && (
             <p className="texto-pequeno texto-fraco" role="status">
-              Nenhum simulado utilizável foi encontrado em <code>content/simulados/</code>.
+              Nenhum conteúdo utilizável foi encontrado para {ROTULO_CURSO[curso]}.
             </p>
           )}
 

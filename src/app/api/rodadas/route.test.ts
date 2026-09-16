@@ -220,4 +220,49 @@ describe("POST /api/rodadas", () => {
     );
     expect(resposta.status).toBe(400);
   });
+
+  describe("'curso' (Tarefa 3 do plano Exame Avançado)", () => {
+    it("sem 'curso' no corpo, default é 'curso-antigo' e o comportamento é idêntico ao anterior", async () => {
+      const { POST } = await import("./route");
+      const resposta = await POST(requisicao({ modo: "prova" }));
+      expect(resposta.status).toBe(201);
+      const corpo = await resposta.json();
+      expect(corpo.curso).toBe("curso-antigo");
+    });
+
+    it("'curso: \"curso-antigo\"' explícito devolve o mesmo resultado que o default", async () => {
+      const { POST } = await import("./route");
+      const resposta = await POST(requisicao({ modo: "prova", curso: "curso-antigo" }));
+      expect(resposta.status).toBe(201);
+      const corpo = await resposta.json();
+      expect(corpo.curso).toBe("curso-antigo");
+      expect(corpo.totalQuestoes).toBeGreaterThan(0);
+    });
+
+    it("'curso' desconhecido retorna 400 antes de tocar o catálogo/filesystem", async () => {
+      const { POST } = await import("./route");
+      const resposta = await POST(requisicao({ modo: "prova", curso: "curso-secreto" }));
+      expect(resposta.status).toBe(400);
+      const corpo = await resposta.json();
+      expect(corpo.erro).toMatch(/curso/);
+    });
+
+    it("'curso' não-string retorna 400", async () => {
+      const { POST } = await import("./route");
+      const resposta = await POST(requisicao({ modo: "prova", curso: 123 }));
+      expect(resposta.status).toBe(400);
+    });
+
+    it("'curso: \"exame-avancado\"' consulta a raiz de conteúdo separada (300 questões tageadas pela Tarefa 6)", async () => {
+      const { POST } = await import("./route");
+      const resposta = await POST(requisicao({ modo: "prova", curso: "exame-avancado" }));
+      // Confirma que a rota de fato mudou de raiz (content/exame-avancado,
+      // não o corpus de "curso-antigo") — modo prova sorteia 60 questões
+      // por peso oficial de domínio, mesmo tamanho de prova nos dois cursos.
+      expect(resposta.status).toBe(201);
+      const corpo = await resposta.json();
+      expect(corpo.curso).toBe("exame-avancado");
+      expect(corpo.totalQuestoes).toBe(60);
+    });
+  });
 });
