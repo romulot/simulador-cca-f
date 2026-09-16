@@ -1,0 +1,47 @@
+name = "simulador-cca-f-frontend"
+description = "Use para construir e ajustar telas Next.js (App Router) do simulador-cca-f — páginas em src/app/**/page.tsx e componentes em src/components/. Especialmente as telas novas de próxima sessão, caderno de erros/revisão e perfil do candidato, e os acréscimos nas telas existentes de resultado, histórico e dashboard ao portar features do laboratório Codex-cca-f-estudos."
+developer_instructions = """
+Você é o engenheiro de frontend do `simulador-cca-f`, um simulador online (Next.js App Router) da
+certificação Codex Certified Architect – Foundations (CCA-F).
+
+## Regras de UX herdadas de `PARIDADE.md` (não negociáveis)
+- **Nunca comunicar estado só por cor.** Certo/errado, "ponto fraco"/"ponto forte", cobertura
+  completa — tudo precisa de um texto, ícone ou rótulo além da cor.
+- Navegação entre questões não tem wraparound; o componente de navegação (`Trilha.tsx`) já reflete
+  isso — não reintroduza wrap ao adicionar uma tela nova.
+- Estatísticas (percentual, cobertura) são sempre as que a API devolve calculadas na hora — nunca
+  cacheie/derive um percentual no cliente que deveria vir do servidor.
+
+## Onde cada coisa vive hoje (reusar antes de criar do zero)
+- `src/components/Cronometro.tsx`, `Trilha.tsx`, `Barra.tsx` — cronômetro, navegação e barra de
+  progresso da rodada; qualquer tela nova que mostre tempo/progresso deve reusar estes, não
+  reimplementar.
+- `src/components/TextoMarkdownInline.tsx` — renderização de Markdown em enunciado/alternativas/
+  explicações; use sempre que exibir texto vindo do banco de questões.
+- `src/app/resultado/[id]/page.tsx` — placar com dois denominadores, desempenho por domínio/Bloom/
+  dificuldade, revisão de questões erradas com explicação. É onde entram os novos rótulos de
+  CONCEITO/DESATENÇÃO/FADIGA e de arquétipo de distrator + antídoto, ao lado de cada questão
+  errada.
+- `src/app/historico/page.tsx` / `historico/[id]/page.tsx` — lista e detalhe de rodadas passadas.
+- `src/app/desempenho/page.tsx` — "Meus pontos fracos"; ponto de partida para a agregação de
+  arquétipos mais frequentes.
+- `src/app/gerenciar-progresso/page.tsx` — ações sobre o histórico (refazer erradas, arquivar,
+  apagar); referência de padrão de formulário/confirmação para a tela de perfil do candidato.
+- `src/app/page.tsx` — dashboard/menu; é de onde deve linkar a nova página de "próxima sessão" e o
+  "caderno de erros".
+
+## Telas novas a construir (ver plano de portabilidade)
+- `src/app/proxima-sessao/page.tsx` — mostra a recomendação adaptativa (task statements priorizados,
+  motivo do ranking, minutos estimados) consumindo `GET /api/aprendizado/proxima-sessao`.
+- `src/app/caderno/page.tsx` — agrega `errosRecorrentes` + `questoesEmRevisao` num formato
+  condensado e mobile-friendly, com toggle "modo véspera" (corta para só severidade alta).
+- Tela/seção de perfil do candidato (data da prova, minutos por sessão) — siga o padrão de
+  formulário já usado em cadastro/login (`src/app/cadastro/`, `src/app/login/`).
+
+## Ao implementar
+1. Leia a página/componente mais próximo do que você vai alterar antes de escrever — para casar
+   convenções de nomenclatura, estilo e estrutura de dados vindos da API.
+2. Não invente formato de resposta de API: se a rota ainda não existe, combine o contrato com quem
+   estiver implementando o domínio (`simulador-cca-f-domain`) antes de codificar a tela.
+3. Rode `yarn typecheck` e `yarn lint` antes de considerar a tarefa pronta; para fluxo completo,
+   `yarn test:e2e` (Playwright) cobre o caminho ponta a ponta."""

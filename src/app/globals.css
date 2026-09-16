@@ -4,25 +4,26 @@
  * nasceu como uma TUI, e a web mantém o mesmo espírito sem virar um
  * clone literal de terminal. Títulos/UI/dados em monoespaçada (o
  * "instrumento"); enunciados e explicações em serifada (a "leitura").
- * Paleta quente (papel + âmbar), não preto-com-neon nem creme-com-serifa-
- * terracota — as duas combinações "padrão" de design gerado por IA.
+ * Paleta azul-petróleo, inspirada em interfaces de terminal sem copiar seu
+ * chrome literalmente. Superfícies e texto usam contraste contido; cores de
+ * estado permanecem reservadas para informação funcional.
  */
 
 :root {
-  --fundo: #f6f2e9;
-  --papel: #201c14;
-  --painel: #fffdf8;
-  --painel-fraco: #efe9db;
-  --borda: #dcd3bf;
-  --acento: #b5730b;
-  --acento-texto: #ffffff;
-  --acerto: #2f7a4c;
-  --erro: #b24a2e;
-  --fraco: #6b6455;
+  --fundo: #062f36;
+  --papel: #c5d0ce;
+  --painel: #0b3940;
+  --painel-fraco: #123f46;
+  --borda: #6b9094;
+  --acento: #91bdc4;
+  --acento-texto: #062f36;
+  --acerto: #75bc91;
+  --erro: #ef7882;
+  --fraco: #91a6a6;
 
   --raio: 10px;
   --raio-pequeno: 6px;
-  --sombra: 0 1px 2px rgba(32, 28, 20, 0.06), 0 4px 16px rgba(32, 28, 20, 0.05);
+  --sombra: 0 1px 2px rgba(0, 12, 15, 0.18), 0 4px 18px rgba(0, 12, 15, 0.12);
 
   --fonte-serifada:
     var(--font-corpo), Georgia, "Times New Roman", serif;
@@ -30,42 +31,12 @@
     var(--font-instrumento), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --fundo: #15130f;
-    --papel: #ede6d9;
-    --painel: #1e1b16;
-    --painel-fraco: #262119;
-    --borda: #3a342a;
-    --acento: #e8a33d;
-    --acento-texto: #1a1207;
-    --acerto: #6fa97c;
-    --erro: #d97757;
-    --fraco: #948c78;
-    --sombra: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 20px rgba(0, 0, 0, 0.25);
-  }
-}
-
-:root[data-theme="dark"] {
-  --fundo: #15130f;
-  --papel: #ede6d9;
-  --painel: #1e1b16;
-  --painel-fraco: #262119;
-  --borda: #3a342a;
-  --acento: #e8a33d;
-  --acento-texto: #1a1207;
-  --acerto: #6fa97c;
-  --erro: #d97757;
-  --fraco: #948c78;
-  --sombra: 0 1px 2px rgba(0, 0, 0, 0.25), 0 4px 20px rgba(0, 0, 0, 0.25);
-}
-
 * {
   box-sizing: border-box;
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: dark;
 }
 
 body {
