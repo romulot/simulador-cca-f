@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { agrupar, descobrir } from "./index";
+import { agrupar, cursoIdValido, descobrir, raizDoCurso } from "./index";
 
 const RAIZ_REAL = join(process.cwd(), "content/simulados");
 
@@ -111,5 +111,33 @@ describe("descobrir — pares quebrados não derrubam a descoberta", () => {
     expect(solto?.erro).toBeNull();
     expect(solto?.grupo).toBe("_fixture-catalogo");
     expect(solto?.questoes[0]?.dominio).toBeNull();
+  });
+});
+
+describe("curso — raiz por curso (Tarefa 2 do plano Exame Avançado)", () => {
+  it("cursoIdValido aceita só os dois ids canônicos", () => {
+    expect(cursoIdValido("curso-antigo")).toBe(true);
+    expect(cursoIdValido("exame-avancado")).toBe(true);
+    expect(cursoIdValido("qualquer-outra-coisa")).toBe(false);
+  });
+
+  it("raizDoCurso('curso-antigo') aponta para content/simulados, igual à raiz padrão real", () => {
+    expect(raizDoCurso("curso-antigo")).toBe(RAIZ_REAL);
+  });
+
+  it("raizDoCurso('exame-avancado') aponta para content/exame-avancado", () => {
+    expect(raizDoCurso("exame-avancado")).toBe(join(process.cwd(), "content/exame-avancado"));
+  });
+
+  it("descobrir(raizDoCurso(curso)) funciona para os dois cursos sem quebrar o corpus real", () => {
+    // Mesma contagem que `descobrir(RAIZ_REAL)` (describe "corpus real"
+    // acima) — só confirma que `raizDoCurso` aponta para a raiz certa, sem
+    // duplicar a asserção de contagem exata daquele describe.
+    const paresCursoAntigo = descobrir(raizDoCurso("curso-antigo"));
+    expect(paresCursoAntigo.length).toBe(descobrir(RAIZ_REAL).length);
+
+    // Ainda sem conteúdo tagueado (Tarefa 6 do plano) — só confirma que a
+    // raiz nova é descoberta sem lançar, mesmo vazia/com pares inválidos.
+    expect(() => descobrir(raizDoCurso("exame-avancado"))).not.toThrow();
   });
 });

@@ -16,6 +16,7 @@
  */
 import type { Pool } from "pg";
 
+import type { CursoId } from "@/lib/catalogo";
 import type { Letra, Questao } from "@/lib/parser/tipos";
 import {
   encerrada,
@@ -44,6 +45,10 @@ export interface RodadaPersistida {
    * do domínio). Evita uma segunda consulta em quem só quer exibir "quando
    * isso aconteceu" (ex.: histórico). */
   iniciadaEm: Date;
+  /** Qual banco de conteúdo esta rodada usa — decide a raiz consultada
+   * depois por quem recompõe dados a partir de `origem`/`dominio` (ver
+   * `raizDoCurso` em `@/lib/catalogo`). */
+  curso: CursoId;
 }
 
 export interface CriarRodadaParams {
@@ -54,6 +59,13 @@ export interface CriarRodadaParams {
    * decisão de ordem é de quem chama, não deste repositório. */
   questoes: Questao[];
   modo: Modo;
+  /** Curso de onde `questoes` foi descoberto — gravado junto para que
+   * rotas de leitura futuras (histórico, caderno, etc.) saibam qual raiz de
+   * conteúdo consultar sem precisar inferir a partir de `origem`. Opcional,
+   * default `"curso-antigo"` — mesmo default da coluna no banco, preserva
+   * todos os chamadores existentes (anteriores à Tarefa 3 do plano Exame
+   * Avançado) sem exigir que cada um passe o campo. */
+  curso?: CursoId;
   limiteSegundos: number | null;
   /** Só para o modo prova. */
   composicao?: {
@@ -79,6 +91,7 @@ interface LinhaRodada {
   cotas_json: string | null;
   disponivel_json: string | null;
   deficit_json: string | null;
+  curso: CursoId;
 }
 
 interface LinhaQuestaoRodada {
@@ -114,6 +127,7 @@ interface LinhaEstadoRodadaLeve {
   cotas_json: string | null;
   disponivel_json: string | null;
   deficit_json: string | null;
+  curso: CursoId;
   total_questoes: number;
   respostas: Array<Letra | null>;
 }
@@ -136,6 +150,7 @@ export interface EstadoRodadaLeve {
   esgotouTempo: boolean;
   status: "em_andamento" | "finalizada";
   indiceAtual: number;
+  curso: CursoId;
   totalQuestoes: number;
   respostas: Array<Letra | null>;
   composicao: ComposicaoPersistida;
@@ -183,10 +198,10 @@ export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promis
     const resultado = await client.query<{ id: number }>(
       `INSERT INTO rodadas
          (user_id, modo, iniciada_em, limite_segundos, decorrido_segundos, esgotou_tempo,
-          status, indice_atual, cotas_json, disponivel_json, deficit_json)
+          status, indice_atual, cotas_json, disponivel_json, deficit_json, curso)
        VALUES
          ($1, $2, $3, $4, NULL, FALSE,
-          'em_andamento', 0, $5, $6, $7)
+          'em_andamento', 0, $5, $6, $7, $8)
        RETURNING id`,
       [
         params.userId,
@@ -196,6 +211,7 @@ export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promis
         params.composicao ? JSON.stringify(params.composicao.cotas) : null,
         params.composicao ? JSON.stringify(params.composicao.disponivel) : null,
         params.composicao ? JSON.stringify(params.composicao.deficit) : null,
+        params.curso ?? "curso-antigo",
       ],
     );
     const rodadaId = resultado.rows[0].id;
@@ -315,6 +331,7 @@ export async function carregarRodada(
     },
     status: linhaRodada.status,
     iniciadaEm: new Date(linhaRodada.iniciada_em),
+    curso: linhaRodada.curso,
   };
 }
 
@@ -342,6 +359,7 @@ export async function carregarEstadoRodadaLeve(
             r.cotas_json,
             r.disponivel_json,
             r.deficit_json,
+            r.curso,
             (SELECT COUNT(*)::integer
                FROM questoes_rodada qr
               WHERE qr.rodada_id = r.id) AS total_questoes,
@@ -381,6 +399,7 @@ export async function carregarEstadoRodadaLeve(
     esgotouTempo: rodada.esgotou_tempo,
     status: rodada.status,
     indiceAtual: rodada.indice_atual,
+    curso: rodada.curso,
     totalQuestoes: rodada.total_questoes,
     respostas: rodada.respostas,
     composicao: {

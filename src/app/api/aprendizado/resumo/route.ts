@@ -65,7 +65,13 @@ export async function GET(request: Request): Promise<Response> {
   const respostas = await respostasBrutas(db, userId);
 
   const fracos = pontosFracos(estatisticasPorTopico(respostas));
-  const porDominio = new Map(desempenhoPorDominio(respostas).map((d) => [d.dominio, d]));
+  // Desempenho por domínio nunca inclui a trilha "Exame Avançado" — ela não
+  // revela domínio ao candidato (ver Tarefa 8 do plano); as demais
+  // agregações desta rota (tópico, geral) continuam somando as duas
+  // trilhas.
+  const porDominio = new Map(
+    desempenhoPorDominio(respostas.filter((r) => r.curso === "curso-antigo")).map((d) => [d.dominio, d]),
+  );
 
   const dominios = new Map<number, DominioResumoResposta>();
   for (const fraco of fracos) {

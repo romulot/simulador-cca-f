@@ -28,7 +28,7 @@
  */
 import { NextResponse } from "next/server";
 
-import { descobrir } from "@/lib/catalogo";
+import { cursoIdValido, descobrir, raizDoCurso, type CursoId } from "@/lib/catalogo";
 import { obterConexao } from "@/db/conexao";
 import { carregarRodada, criarRodada } from "@/db/repositorioRodadas";
 import { respostasBrutas } from "@/db/repositorioAprendizado";
@@ -82,7 +82,20 @@ export async function POST(request: Request): Promise<Response> {
     return respostaErro(400, "'modo' deve ser 'pratica', 'aleatorio' ou 'prova'");
   }
 
-  const paresDisponiveis = descobrir();
+  // Opcional: default 'curso-antigo' preserva todo cliente existente que
+  // ainda não sabe da escolha de curso (Tarefa 9 do plano Exame Avançado).
+  // Validado ANTES de tocar o catálogo/filesystem: o valor só indexa
+  // `raizDoCurso`, nunca monta caminho de arquivo diretamente.
+  const cursoBruto = (corpo as Record<string, unknown>).curso;
+  if (cursoBruto !== undefined && typeof cursoBruto !== "string") {
+    return respostaErro(400, "'curso' deve ser uma string");
+  }
+  if (cursoBruto !== undefined && !cursoIdValido(cursoBruto)) {
+    return respostaErro(400, "'curso' deve ser 'curso-antigo' ou 'exame-avancado'");
+  }
+  const curso: CursoId = cursoBruto ?? "curso-antigo";
+
+  const paresDisponiveis = descobrir(raizDoCurso(curso));
   const rng = criarRngPadrao();
 
   let questoes: Questao[];
@@ -203,6 +216,7 @@ export async function POST(request: Request): Promise<Response> {
     userId,
     questoes,
     modo,
+    curso,
     limiteSegundos,
     composicao: composicaoResposta
       ? {
@@ -223,6 +237,7 @@ export async function POST(request: Request): Promise<Response> {
     {
       rodadaId,
       modo,
+      curso: persistida.curso,
       totalQuestoes: persistida.estado.questoes.length,
       limiteSegundos,
       questaoAtual: paraQuestaoCliente(persistida.estado.questoes[0], 0),

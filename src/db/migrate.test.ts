@@ -35,6 +35,7 @@ describe("migrate", () => {
       "006_arquetipos_questoes_rodada.sql",
       "007_acesso_restrito.sql",
       "008_modo_aleatorio.sql",
+      "009_curso_rodadas.sql",
     ]);
   });
 
@@ -97,6 +98,7 @@ describe("migrate", () => {
       "disponivel_json",
       "deficit_json",
       "arquivada",
+      "curso",
     ]);
   });
 

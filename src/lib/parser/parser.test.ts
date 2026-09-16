@@ -19,6 +19,7 @@ import { LETRAS } from "./tipos";
 // usa arquivos de fixture reais, porque `carregarPar` exige caminho
 // dentro de content/simulados/ — ver a guarda de path traversal).
 const baseDir = join(process.cwd(), "content/simulados");
+const baseDirExameAvancado = join(process.cwd(), "content/exame-avancado");
 
 const templateSimulado = (questoes: string) => `# Simulado — Teste
 
@@ -708,6 +709,39 @@ Resposta para a questão ${numero}.
     it("caminho inexistente vira FormatoInvalido, não um erro cru do fs", () => {
       const caminho = join(dirFixture, "nao_existe_simulado.md");
       expect(() => carregarPar(caminho, caminho)).toThrow(FormatoInvalido);
+    });
+  });
+
+  describe("carregarPar — segunda raiz permitida content/exame-avancado (Tarefa 1)", () => {
+    const testDir = join(baseDirExameAvancado, "_fixture-raiz-nova");
+
+    beforeEach(() => {
+      mkdirSync(testDir, { recursive: true });
+    });
+
+    afterEach(() => {
+      rmSync(testDir, { recursive: true, force: true });
+    });
+
+    it("aceita um par dentro de content/exame-avancado/, além de content/simulados/", () => {
+      const simulado = templateSimulado(questaoSimuladoValida(1));
+      const gabarito = templateGabarito(questaoGabaritoValida(1));
+
+      const caminhoSimulado = join(testDir, "teste_simulado.md");
+      const caminhoGabarito = join(testDir, "teste_gabarito.md");
+
+      writeFileSync(caminhoSimulado, simulado, "utf-8");
+      writeFileSync(caminhoGabarito, gabarito, "utf-8");
+
+      const questoes = carregarPar(caminhoSimulado, caminhoGabarito);
+      expect(questoes).toHaveLength(1);
+      expect(questoes[0].correta).toBe("A");
+    });
+
+    it("continua rejeitando caminho fora de content/simulados/ e content/exame-avancado/", () => {
+      expect(() => carregarPar("../../etc/passwd_simulado.md", "../../etc/passwd_gabarito.md")).toThrow(
+        FormatoInvalido,
+      );
     });
   });
 });

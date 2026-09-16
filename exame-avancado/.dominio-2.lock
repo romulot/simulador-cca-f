@@ -1,0 +1,12 @@
+{
+  "semente": "ccaf-exame-avancado-2026",
+  "questoes": 60,
+  "distribuicao": {
+    "D": 15,
+    "B": 15,
+    "C": 15,
+    "A": 15
+  },
+  "sha_simulado": "87a53ea306bcc041",
+  "sha_gabarito": "42c66303ddc5e1ea"
+}
