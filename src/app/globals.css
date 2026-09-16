@@ -4,22 +4,22 @@
  * nasceu como uma TUI, e a web mantém o mesmo espírito sem virar um
  * clone literal de terminal. Títulos/UI/dados em monoespaçada (o
  * "instrumento"); enunciados e explicações em serifada (a "leitura").
- * Paleta azul-petróleo, inspirada em interfaces de terminal sem copiar seu
- * chrome literalmente. Superfícies e texto usam contraste contido; cores de
- * estado permanecem reservadas para informação funcional.
+ * Paleta sépia, em tons de bege/creme e marrom — pensada para conforto de
+ * leitura longa, como papel de livro. Superfícies e texto usam contraste
+ * contido; cores de estado permanecem reservadas para informação funcional.
  */
 
 :root {
-  --fundo: #062f36;
-  --papel: #c5d0ce;
-  --painel: #0b3940;
-  --painel-fraco: #123f46;
-  --borda: #6b9094;
-  --acento: #91bdc4;
-  --acento-texto: #062f36;
-  --acerto: #75bc91;
-  --erro: #ef7882;
-  --fraco: #91a6a6;
+  --fundo: #f4ecd8;
+  --papel: #3e2723;
+  --painel: #efe1c4;
+  --painel-fraco: #e8d6b3;
+  --borda: #7c6944;
+  --acento: #7a4f24;
+  --acento-texto: #f4ecd8;
+  --acerto: #2a5f38;
+  --erro: #9c2f26;
+  --fraco: #6b5842;
 
   --raio: 10px;
   --raio-pequeno: 6px;
@@ -36,7 +36,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
