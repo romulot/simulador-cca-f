@@ -176,6 +176,16 @@ export default function TelaRodada() {
       // painel de feedback assim que o candidato sai da questão.
       setFeedback(corpoResposta.feedback ?? null);
       mostradaEm.current = Date.now();
+
+      // Em modos avaliativos, abre confirmação automaticamente quando todas
+      // as questões foram respondidas (independente de qual foi a última).
+      if (
+        corpo.resposta !== undefined &&
+        (estado.modo === "aleatorio" || estado.modo === "prova") &&
+        (corpoResposta.respostas as Array<Letra | null>).every((r) => r !== null)
+      ) {
+        setConfirmandoFim(true);
+      }
     } finally {
       setEnviando(false);
     }
@@ -289,7 +299,14 @@ export default function TelaRodada() {
                     justifyContent: "flex-start",
                     textAlign: "left",
                     borderColor: corDaBorda,
-                    background: marcada && !feedback ? "var(--painel-fraco)" : undefined,
+                    // Sombra interna simula borda dupla: torna evidente qual
+                    // alternativa está marcada sem depender só da cor da borda.
+                    boxShadow: marcada && !feedback
+                      ? "inset 0 0 0 1px var(--acento)"
+                      : undefined,
+                    background: marcada && !feedback
+                      ? "color-mix(in srgb, var(--acento) 14%, var(--painel))"
+                      : undefined,
                     // `.botao:disabled` apaga a opacidade para 0.45 — correto
                     // para um botão comum inativo, mas aqui apagaria
                     // justamente a cor de certo/errado que é o conteúdo.
