@@ -62,6 +62,15 @@ function respostaErro(status: number, mensagem: string) {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  try {
+    return await postInterno(request);
+  } catch (erro) {
+    console.error("[POST /api/rodadas]", erro);
+    return respostaErro(500, "erro interno do servidor");
+  }
+}
+
+async function postInterno(request: Request): Promise<Response> {
   const userId = obterUsuarioIdDaSessao(request);
   if (userId === null) {
     return respostaErro(401, "não autenticado");
