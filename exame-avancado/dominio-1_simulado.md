@@ -13,10 +13,10 @@ A team builds a support agent with the Anthropic SDK. Their loop ends when the a
 
 What is the correct fix?
 
-- **A)** Train a small classifier that decides, from the assistant's text, whether the turn is really complete.
-- **B)** Add "Never write filler text before calling a tool" to the system prompt so the text check becomes reliable.
-- **C)** Raise the maximum iteration count so the loop has more chances to reach the refund tool.
-- **D)** Terminate the loop only when `stop_reason` is `end_turn`, and execute every `tool_use` block returned while `stop_reason` is `tool_use`.
+- **A)** Train a small classifier on the assistant's text output to detect completion intent, since stop_reason is unreliable when the model mixes prose and tool calls in the same response turn.
+- **B)** Add "Never write filler text before calling a tool" to the system prompt so the text check becomes reliable, ensuring the phrase only appears when work is actually done.
+- **C)** Raise the maximum iteration count so the loop has more chances to reach the refund tool before the session ends.
+- **D)** Check `stop_reason`: execute tool blocks on `tool_use`, exit only on `end_turn`.
 
 ---
 
@@ -26,10 +26,10 @@ A research coordinator must gather the current stock price, the latest earnings 
 
 What change most reduces total latency?
 
-- **A)** Increase `max_tokens` so more work fits into each response.
-- **B)** Merge the three tools into one tool that takes a ticker and returns everything.
-- **C)** Switch the coordinator model from Sonnet to Opus so each turn resolves faster.
-- **D)** Emit all three tool calls in a single assistant turn so they execute in parallel, then process the three `tool_result` blocks together.
+- **A)** Increase `max_tokens` so more work fits into each response, reducing the number of turns the coordinator needs to complete all three lookups.
+- **B)** Merge the three tools into one that takes a ticker and returns all data in a single call, eliminating the need to coordinate separate results in a later turn.
+- **C)** Switch the coordinator model from Sonnet to Opus so each turn resolves faster and the model reasons about parallel opportunities on its own.
+- **D)** Emit all three tool calls in a single assistant turn so they execute in parallel, then process the results together.
 
 ---
 
@@ -39,10 +39,10 @@ A coordinator spawns a `document-analyst` subagent with the prompt: "Analyze the
 
 What is the underlying cause?
 
-- **A)** The coordinator must call the subagent twice — once to load memory and once to do the work.
-- **B)** The subagent's `allowedTools` list is missing the Read tool.
-- **C)** The coordinator's context window filled up and evicted the earlier messages.
-- **D)** Subagents run in an isolated context and inherit nothing from the coordinator, so every document reference and the full rubric must be written into the spawn prompt.
+- **A)** The coordinator must call the subagent twice — once to load memory and once to do the work, since subagents require an initialization phase before accepting task prompts.
+- **B)** The subagent's `allowedTools` list is missing the Read tool, so it cannot access any files even if the paths were provided in the spawn prompt.
+- **C)** The coordinator's context window filled up and evicted the earlier messages, so the references to documents and rubric were silently dropped before the spawn call was made.
+- **D)** Subagents inherit nothing from the coordinator; documents and rubric must be in the spawn prompt.
 
 ---
 
@@ -52,10 +52,10 @@ A CI agent must never open a pull request before the full test suite has passed.
 
 Which approach guarantees the requirement?
 
-- **A)** Ask the agent to confirm in its response that tests passed before it opens the PR.
-- **B)** A `PreToolUse` hook on the PR-creation tool that checks a recorded test-pass state and blocks the call when it is absent.
-- **C)** Give the PR tool a `tests_passed` boolean parameter that the agent fills in.
-- **D)** Move the instruction to the top of `CLAUDE.md` and repeat it in the system prompt.
+- **A)** Ask the agent to confirm in its response that tests passed before it opens the PR, creating a self-verification step the agent must complete before proceeding.
+- **B)** A `PreToolUse` hook on the PR-creation tool that checks recorded test-pass state and blocks the call when absent.
+- **C)** Give the PR tool a `tests_passed` boolean parameter that the agent must fill in before calling, so the system has an explicit record of the agent's claim.
+- **D)** Move the instruction to the top of `CLAUDE.md` and repeat it in bold in the system prompt so the model sees it twice on every request.
 
 ---
 
@@ -65,10 +65,10 @@ A pipeline runs five subagents in sequence. It crashed after subagent three. On 
 
 What design prevents this?
 
-- **A)** Persist each subagent's structured output to durable storage keyed by step, and on restart skip any step whose output already exists.
-- **B)** Run all five subagents in parallel so a crash affects only one of them.
-- **C)** Ask the coordinator to summarize progress after each step so it can describe what was done.
-- **D)** Increase the retry count on each subagent so transient failures do not reach the pipeline level.
+- **A)** Persist each subagent's output to durable storage keyed by step; on restart, skip any step that already has a stored result.
+- **B)** Run all five subagents in parallel so a crash only affects one lane and the others can still complete their work independently.
+- **C)** Ask the coordinator to summarize progress after each step inside the conversation so it can describe what was done when restarted.
+- **D)** Increase the retry count on each subagent so transient failures are absorbed locally without escalating to a full pipeline restart.
 
 ---
 
@@ -78,10 +78,10 @@ An engineer asks an agent to "research the electric vehicle market." The coordin
 
 Which statement best explains the failure?
 
-- **A)** The synthesis step discarded the missing topics because they had low confidence scores.
-- **B)** The coordinator used parallel execution when sequential execution was required.
-- **C)** The subagents shared a context window and overwrote each other's findings.
-- **D)** The decomposition was too narrow, and because each subagent sees only its own isolated context, none of them could flag the missing dimensions.
+- **A)** The synthesis step discarded the missing topics because they had low confidence scores and the aggregation logic was set to prefer high-confidence findings only.
+- **B)** The coordinator used parallel execution when sequential execution was required, which prevented each subagent from building on the others' discoveries.
+- **C)** The subagents shared a context window and overwrote each other's findings, causing the topics assigned to later agents to be lost entirely.
+- **D)** The decomposition was too narrow; each subagent sees only its own slice and cannot flag what the coordinator never thought to assign.
 
 ---
 
@@ -91,10 +91,10 @@ A coordinator prompt reads: "Step 1: call the search agent. Step 2: call the ana
 
 Which change best addresses this?
 
-- **A)** Add a fourth step instructing the coordinator to check the search results.
-- **B)** Give the coordinator a goal and quality criteria, letting it decide which agents to invoke and re-delegate when coverage is insufficient.
-- **C)** Increase the search agent's timeout so it has more time to find results.
-- **D)** Reorder the steps so analysis runs before search.
+- **A)** Add a fourth step instructing the coordinator to check the search results before proceeding, so the script has an explicit branch that can catch empty responses.
+- **B)** Replace the fixed script with a goal and quality criteria, letting the coordinator decide which agents to invoke and re-delegate when needed.
+- **C)** Increase the search agent's timeout so it has more time to find results before the coordinator proceeds to the next fixed step.
+- **D)** Reorder the steps so analysis runs before search, giving the analysis agent a chance to frame the question before raw retrieval happens.
 
 ---
 
@@ -104,10 +104,10 @@ A developer wants a subagent that reviews code and must not be able to modify fi
 
 Which configuration enforces this?
 
-- **A)** Run the subagent in plan mode so its edits are queued rather than applied.
-- **B)** Set the subagent's model to Haiku, which cannot perform write operations.
-- **C)** Define the subagent with an `allowedTools` list containing only Read, Grep, and Glob, so the restriction is applied at the platform level.
-- **D)** Write "You are a read-only reviewer. Never edit files." in the subagent's system prompt.
+- **A)** Run the subagent in plan mode so its edits are queued rather than applied immediately, giving a human the chance to reject them.
+- **B)** Set the subagent's model to Haiku, which cannot perform write operations due to its smaller parameter count and constrained output.
+- **C)** Define the subagent with `allowedTools: [Read, Grep, Glob]`, enforcing the restriction at the platform level.
+- **D)** Write "You are a read-only reviewer. Never edit files or run commands under any circumstances." in the subagent's system prompt.
 
 ---
 
@@ -117,10 +117,10 @@ A team member resumes yesterday's session with `claude --resume` and immediately
 
 What should the engineer do?
 
-- **A)** Rely on the agent detecting the drift on its own once it opens the files.
-- **B)** Provide a structured summary of what changed since the last session and ask the agent to re-read the affected files, because the agent has no awareness of elapsed time or external changes.
-- **C)** Run `/compact` so the agent's summary of prior work is refreshed from the repository.
-- **D)** Start a brand-new session, since resumed sessions cannot read files reliably.
+- **A)** Rely on the agent detecting the drift on its own once it opens the files, since it will notice version mismatches when it reads the current content.
+- **B)** Give the agent a summary of what changed and ask it to re-read the affected files, since it has no awareness of elapsed time or external changes.
+- **C)** Run `/compact` so the agent's summary of prior work is refreshed from the repository and stale references are replaced.
+- **D)** Start a brand-new session, since resumed sessions are sandboxed to their original snapshot and cannot read files that changed after the session was created.
 
 ---
 
@@ -130,10 +130,10 @@ An investigation agent must explore a production incident. The team does not kno
 
 Which orchestration pattern fits?
 
-- **A)** Dynamic adaptive decomposition, where each finding reshapes which subtasks are generated next.
-- **B)** A single agent with a very large context window and no subagents.
-- **C)** Prompt chaining with a fixed sequence of five stages.
-- **D)** Parallel execution of the same investigation prompt across five agents, keeping the best result.
+- **A)** Dynamic adaptive decomposition, where each finding reshapes the subtasks generated next.
+- **B)** A single agent with a very large context window, no subagents, and the full log corpus loaded upfront so it can reason across all evidence in one pass.
+- **C)** Prompt chaining with a fixed sequence of five stages covering collection, triage, root-cause, impact, and remediation regardless of what each stage uncovers.
+- **D)** Parallel execution of the same investigation prompt across five independent agents, then a voting step to pick whichever returns the most detailed result.
 
 ---
 
@@ -143,10 +143,10 @@ Three research subagents are all given the brief "research renewable energy adop
 
 What is the correct fix?
 
-- **A)** Lower each subagent's `max_tokens` so they produce shorter answers.
-- **B)** Partition the scope so each subagent owns a distinct, non-overlapping slice of the problem.
-- **C)** Reduce the number of subagents from three to one.
-- **D)** Add a deduplication step that removes repeated sentences from the final report.
+- **A)** Lower each subagent's `max_tokens` so they produce shorter answers, reducing redundancy by forcing each agent to be more selective.
+- **B)** Partition the research scope so each subagent owns a distinct, non-overlapping slice.
+- **C)** Reduce the number of subagents from three to one, accepting longer latency to eliminate the coordination cost entirely.
+- **D)** Add a post-processing step that removes repeated sentences from the final report, cleaning up the duplication without changing how agents are briefed.
 
 ---
 
@@ -156,10 +156,10 @@ A coordinator aggregates subagent results once and returns the report. Reviewers
 
 Which mechanism most reliably closes those gaps?
 
-- **A)** An instruction telling the coordinator to "be thorough and make sure nothing is missing."
-- **B)** A refinement loop where the coordinator calls an `evaluate_coverage` tool that must return a score and an explicit gap list in structured output before the loop may continue.
-- **C)** Doubling the number of subagents in the first pass.
-- **D)** Asking the report agent to state its confidence at the end of the report.
+- **A)** An instruction telling the coordinator to "be thorough and make sure nothing is missing before finalizing the report."
+- **B)** A refinement loop with an `evaluate_coverage` tool that returns a score and an explicit gap list before the loop may continue.
+- **C)** Doubling the number of subagents in the first pass to improve initial coverage and statistically reduce the chance of any single topic being missed.
+- **D)** Asking the report agent to state its confidence level at the end, treating low confidence as a signal that another pass is needed.
 
 ---
 
@@ -169,10 +169,10 @@ An agent team wants to explore three competing refactoring strategies starting f
 
 Which approach fits?
 
-- **A)** Run `/clear` between strategies so each one starts clean.
-- **B)** Fork the session at the end of the analysis into three independent sessions, each with its own id and resumable history.
-- **C)** Run the three strategies sequentially in the same session and use `/rewind` between them.
-- **D)** Ask the agent to keep the three strategies mentally separate within one conversation.
+- **A)** Run `/clear` between strategies so each one starts clean, discarding any residue from prior attempts before the next strategy begins.
+- **B)** Fork the session into three independent branches, each with its own id and resumable history, isolated from the others.
+- **C)** Run the three strategies sequentially in the same session and use `/rewind` between them to roll back each attempt before starting the next.
+- **D)** Ask the agent to keep the three strategies mentally separate within one conversation, tagging each response with the relevant strategy label.
 
 ---
 
@@ -182,10 +182,10 @@ A coordinator was configured to delegate, but at runtime it performs all the wor
 
 Which cause should be investigated first?
 
-- **A)** Whether the subagents were defined before the coordinator in the source file.
-- **B)** Whether the subagents' system prompts are long enough to describe their roles.
-- **C)** Whether the coordinator's `max_tokens` is high enough to hold subagent results.
-- **D)** Whether the Agent tool is actually present in the coordinator's available tools, since without it there is no mechanism to spawn anything.
+- **A)** Whether the subagents were defined before the coordinator in the source file, since declaration order can affect which objects the runtime resolves first.
+- **B)** Whether the subagents' system prompts are long enough to describe their roles clearly enough for the coordinator to recognize them as distinct.
+- **C)** Whether the coordinator's `max_tokens` is high enough to hold subagent results without truncation.
+- **D)** Whether the Agent tool is present in the coordinator's available tools — without it, there is no mechanism to spawn subagents.
 
 ---
 
@@ -195,10 +195,10 @@ In a multi-agent system, subagents call each other directly whenever they need d
 
 Which architectural change fixes this?
 
-- **A)** Add structured logging to each subagent while keeping the direct connections.
-- **B)** Give every subagent a copy of the full conversation history.
-- **C)** Merge all five subagents into one agent with all the tools.
-- **D)** Route every message through a coordinator in a hub-and-spoke topology, making it the single choke point for routing, context sharing, and error handling.
+- **A)** Add structured logging to each subagent while keeping the direct connections between them, so at least the formats are consistent even if the paths remain distributed.
+- **B)** Give every subagent a copy of the full conversation history so all activity is visible in one transcript and cross-agent queries can be answered without inter-agent calls.
+- **C)** Merge all five subagents into one agent with all the tools, trading specialization for a single process whose log is easy to follow.
+- **D)** Route all messages through a central coordinator, making it the single choke point for routing, context, and error handling.
 
 ---
 
@@ -208,10 +208,10 @@ A team caps their agentic loop at 10 iterations and treats reaching the cap as "
 
 What is the correct design?
 
-- **A)** Remove the cap entirely and rely on the agent to stop.
-- **B)** Have the agent report a percentage-complete estimate each iteration and stop at 100%.
-- **C)** Raise the cap to 50 so complex tasks fit.
-- **D)** Use `stop_reason` as the control mechanism and keep the iteration cap only as a safety backstop against runaway loops.
+- **A)** Remove the cap entirely and rely on the agent to stop itself using its own judgment about when the task is done.
+- **B)** Have the agent report a percentage-complete estimate each iteration and stop when it reports 100%, treating the self-assessment as authoritative.
+- **C)** Raise the cap to 50 so complex tasks fit within the allowed iterations and the truncation problem disappears for realistic workloads.
+- **D)** Drive the loop with `stop_reason` and keep the cap only as a safety backstop against runaway loops.
 
 ---
 
@@ -221,10 +221,10 @@ A refactoring request touches 40 files and carries real risk of breaking the bui
 
 Which Claude Code mode fits?
 
-- **A)** `acceptEdits`, so the engineer reviews the diff after the edits land.
-- **B)** Direct execution followed by `/rewind` if the result is wrong.
-- **C)** `bypassPermissions`, with the engineer watching the terminal.
-- **D)** Plan mode, where Claude analyzes the codebase and presents an approach but cannot modify files or execute commands until the plan is approved.
+- **A)** `acceptEdits`, so the engineer reviews the diff after the edits land automatically and can revert if anything looks wrong.
+- **B)** Direct execution followed by `/rewind` if the result is wrong, since the rewind can undo all changes if the engineer rejects the outcome.
+- **C)** `bypassPermissions`, with the engineer watching the terminal for problems as each file is written.
+- **D)** Plan mode, where Claude analyzes the codebase and presents an approach without modifying any file until the plan is approved.
 
 ---
 
@@ -234,10 +234,10 @@ A support agent has exhausted its tools and must escalate a billing dispute to a
 
 What should the agent send instead?
 
-- **A)** The complete raw conversation transcript.
-- **B)** A structured handoff package containing the customer record, the actions already attempted with their results, the specific blocker, and what the human needs to decide.
-- **C)** A confidence score indicating how certain the agent is that escalation is needed.
-- **D)** A shorter summary, so the human reads it faster.
+- **A)** The complete raw conversation transcript so the human can read the whole exchange and draw their own conclusions without relying on the agent's framing.
+- **B)** A structured package with the customer record, actions attempted, the specific blocker, and what the human needs to decide.
+- **C)** A confidence score indicating how certain the agent is that escalation is needed, so the human can triage the case against others in the queue.
+- **D)** A shorter free-text summary condensed to two sentences so the human can absorb it in seconds and act immediately.
 
 ---
 
@@ -247,10 +247,10 @@ A subagent's file-read tool fails once with a transient network error. The subag
 
 Which failure-handling design is better?
 
-- **A)** The subagent retries locally, tries a fallback, and propagates to the coordinator only what it could not resolve itself.
-- **B)** The coordinator ignores subagent errors and synthesizes from whatever arrived.
-- **C)** The coordinator catches the failure and restarts the whole pipeline from step one.
-- **D)** The subagent returns an empty result so the pipeline continues uninterrupted.
+- **A)** The subagent retries locally, tries a fallback, and escalates only what it cannot resolve.
+- **B)** The coordinator ignores subagent errors entirely and synthesizes from whatever data arrived, treating missing pieces as not worth the latency of a retry.
+- **C)** The coordinator catches the failure and restarts the whole pipeline from step one, ensuring all agents start fresh with a clean slate.
+- **D)** The subagent returns an empty result so the pipeline continues without interruption, with no signal to the coordinator that any data is missing.
 
 ---
 
@@ -260,10 +260,10 @@ A document-processing workflow always performs the same four steps — extract, 
 
 Which pattern is appropriate?
 
-- **A)** A coordinator that decides at runtime which of the four steps to run.
-- **B)** Dynamic adaptive decomposition, so the system can react to each document.
-- **C)** Prompt chaining, a fixed sequential pipeline, because the shape of the work does not change with the input.
-- **D)** Parallel execution of all four steps to minimize latency.
+- **A)** A coordinator that decides at runtime which of the four steps to run for each document, adapting the pipeline to the document's specific characteristics.
+- **B)** Dynamic adaptive decomposition, so the pipeline can react to each document's content and skip steps that do not apply to a given format.
+- **C)** Prompt chaining — a fixed sequential pipeline — since the shape of the work is the same regardless of content.
+- **D)** Parallel execution of all four steps to minimize latency, merging outputs in a final reconciliation step.
 
 ---
 
@@ -273,10 +273,10 @@ An engineer writes a coordinator prompt: "You are a coordinator. Use your judgme
 
 What does this prompt primarily achieve?
 
-- **A)** It guarantees that the coordinator will never call more than one subagent.
-- **B)** It lets the coordinator select the orchestration shape at runtime based on query complexity, instead of running a full pipeline every time.
-- **C)** It enforces at the platform level which tools each subagent may use.
-- **D)** It removes the need for the coordinator to aggregate results.
+- **A)** It guarantees that the coordinator will never call more than one subagent at a time, since single-agent handling is listed first in the prompt.
+- **B)** It lets the coordinator pick the right orchestration shape at runtime based on query complexity, rather than always running the full pipeline.
+- **C)** It enforces at the platform level which tools each subagent may use, since the prompt defines what parallel and sequential mean operationally.
+- **D)** It removes the need for the coordinator to aggregate results from subagents, since the routing logic subsumes the aggregation step.
 
 ---
 
@@ -286,10 +286,10 @@ A team runs the complete six-agent research pipeline for every incoming query, i
 
 What is the correct change?
 
-- **A)** Have the coordinator select only the agents that add value for the given query, using a single agent for simple factual questions.
-- **B)** Switch every agent to Haiku to cut the per-token cost.
-- **C)** Cache the results of the six-agent pipeline keyed by query string.
-- **D)** Reduce each agent's context window so it processes less data.
+- **A)** Have the coordinator select only the agents that add value for the query, skipping the rest.
+- **B)** Switch every agent to Haiku to cut the per-token cost across the board, accepting some quality loss on complex queries to bring the average cost down.
+- **C)** Cache the pipeline output keyed by query string so repeated questions are free, and invest in query normalization to maximize cache hit rate.
+- **D)** Reduce each agent's context window so each one processes less data per call and the total token count across the pipeline falls.
 
 ---
 
@@ -299,10 +299,10 @@ A subagent is defined with a `description` field of "Handles stuff." The coordin
 
 What is the role of `description` in an `AgentDefinition`?
 
-- **A)** It controls which tools the subagent is allowed to call.
-- **B)** It is injected as the subagent's system prompt at spawn time.
-- **C)** It is what the coordinator reads when deciding whether to invoke this agent, so it must state the agent's purpose and boundaries precisely.
-- **D)** It is shown to the end user in the CLI output.
+- **A)** It controls which tools the subagent may call at runtime, acting as a whitelist the platform enforces before any tool invocation proceeds.
+- **B)** It is injected verbatim as the subagent's system prompt at spawn time, so it sets the agent's identity and operating constraints directly.
+- **C)** It is what the coordinator reads when deciding whether to invoke this agent; it must state purpose and usage boundaries precisely.
+- **D)** It is displayed to the end user in the CLI output so they can see which agent handled their request.
 
 ---
 
@@ -312,10 +312,10 @@ During a long Claude Code session the engineer wants to branch off and try a ris
 
 Which capability matches?
 
-- **A)** Forking the session, which creates a new session id while preserving the conversation history up to that point and leaves the original intact.
-- **B)** `/clear`, which resets the conversation but keeps `CLAUDE.md`.
-- **C)** `--continue`, which opens a second copy of the current session.
-- **D)** `/compact`, which summarizes the conversation so the risky path has room.
+- **A)** Forking the session, which creates a new session id from the current state while leaving the original intact.
+- **B)** `/clear`, which resets the conversation but keeps `CLAUDE.md` and AutoMemory loaded so the agent retains project context.
+- **C)** `--continue`, which resumes the most recent session from disk rather than opening a new branch alongside the current one.
+- **D)** `/compact`, which summarizes the conversation to free up context window space for the risky exploratory work ahead.
 
 ---
 
@@ -325,9 +325,9 @@ An orchestration reads: coordinator → search agent → analysis agent → repo
 
 Which execution mode is required?
 
-- **A)** Fork-based, because each agent needs its own session id.
-- **B)** Hub-and-spoke with direct subagent-to-subagent messaging.
-- **C)** Parallel, because all three agents are independent workers.
+- **A)** Fork-based, since each agent needs its own session id to track work separately and avoid clobbering each other's state.
+- **B)** Hub-and-spoke with direct subagent-to-subagent messaging so results pass between agents without each hop going through the coordinator.
+- **C)** Parallel, because all three agents are independent workers with no shared data and should run simultaneously to minimize wall-clock time.
 - **D)** Sequential, because each stage depends on the output of the one before it.
 
 ---
@@ -338,10 +338,10 @@ A team wants to know why their coordinator sometimes produces reports missing en
 
 Which property of hub-and-spoke addresses this?
 
-- **A)** Because every message, result, and error passes through the coordinator, it is a single inspectable point for observability and control.
-- **B)** Because subagents share one context window, all their activity is visible in a single transcript.
-- **C)** Because subagents may talk to each other, failures are contained locally.
-- **D)** Because the coordinator runs the same model as the subagents, their reasoning is identical.
+- **A)** Every message, result, and failure flows through the coordinator, making it a single inspectable point for observability and control.
+- **B)** Subagents share one context window, so all their activity appears in a single transcript that the team can search for missing topics.
+- **C)** Subagents communicate directly with each other, so failures are contained locally without involving the coordinator and creating noise in its log.
+- **D)** The coordinator uses the same model as the subagents, so their reasoning style is consistent and outputs are easier to compare side by side.
 
 ---
 
@@ -351,10 +351,10 @@ An agent receives `stop_reason: "tool_use"` with a request to call `lookup_order
 
 What must the program do next?
 
-- **A)** Start a new conversation with the order data in the system prompt.
-- **B)** Append the output as a plain text user message describing the result.
-- **C)** Append the function's output to the conversation as a message containing a `tool_result` block, then call the API again.
-- **D)** Return the output directly to the end user, because the loop has ended.
+- **A)** Start a new conversation with the order data placed in the system prompt, so the model has a clean context that includes the result without any prior tool_use overhead.
+- **B)** Append the output as a plain text user message describing the result, which the model can read just as well as a typed tool_result block.
+- **C)** Append a `tool_result` block with the function's output to the conversation, then call the API again.
+- **D)** Return the output directly to the end user, because the loop has now ended and no further model call is needed.
 
 ---
 
@@ -367,10 +367,10 @@ Design B: "Find every place where payment processing happens. Report file paths,
 
 Which statement is correct?
 
-- **A)** Design B is goal-oriented with quality criteria, letting the subagent adapt its search strategy while the coordinator still controls what a complete answer looks like.
-- **B)** Design A is better because it removes all ambiguity about the steps.
-- **C)** Design B will produce inconsistent results because it does not fix the tool sequence.
-- **D)** Both designs are equivalent because the subagent chooses its own tools anyway.
+- **A)** Design B sets the goal and quality criteria, letting the subagent choose how to search while the coordinator defines what a complete answer looks like.
+- **B)** Design A is better because it removes all ambiguity about the required steps, ensuring the subagent follows a deterministic path that is easy to debug when results are incomplete.
+- **C)** Design B will produce inconsistent results because it does not fix the order of tool calls, leaving the subagent free to search in ways that miss files found only by a specific sequence.
+- **D)** Both designs are equivalent because the subagent selects its own tools regardless of the prompt and will follow the same search strategy either way.
 
 ---
 
@@ -380,10 +380,10 @@ A team notices their coordinator invents subtasks that the available subagents c
 
 Which control catches weak decomposition before work begins?
 
-- **A)** A post-hoc check during result aggregation only.
-- **B)** A longer system prompt listing every possible subtask in advance.
-- **C)** A validation tool that reviews the proposed task list against coverage requirements before any subagent is delegated to.
-- **D)** A higher iteration cap so the coordinator can retry until something works.
+- **A)** A post-hoc check run only during result aggregation, after subagents have finished, to detect tasks that returned errors or empty results.
+- **B)** A longer system prompt listing every possible subtask the coordinator might need, so it never invents tasks outside the predefined set.
+- **C)** A validation tool that reviews the proposed task list against coverage requirements before delegation begins.
+- **D)** A higher iteration cap so the coordinator can retry failed subtasks until something works, cycling through alternatives automatically.
 
 ---
 
@@ -393,10 +393,10 @@ An engineer kills a Claude Code session in the IDE and wants to pick it back up 
 
 What does Claude Code provide?
 
-- **A)** A session id that can be used with `/resume` (or `claude --resume`) to restore the conversation history.
-- **B)** An automatic replay of the last ten tool calls on next startup.
-- **C)** A `.claude/session.md` file written to the repository root.
-- **D)** Nothing — killed sessions are always lost.
+- **A)** A session id usable with `/resume` or `claude --resume` to restore the full conversation history.
+- **B)** An automatic replay of the last ten tool calls when the IDE restarts, re-executing each one in order to rebuild the final state.
+- **C)** A `.claude/session.md` file written to the repository root after every session, containing a full transcript that can be re-imported manually.
+- **D)** Nothing — killed sessions are treated as discarded and cannot be recovered once the IDE process exits.
 
 ---
 
@@ -406,10 +406,10 @@ A coordinator receives outputs from a research agent, a writing agent, and a rev
 
 Which aggregation instruction is most appropriate?
 
-- **A)** "Discard any finding that another agent contradicts."
-- **B)** "Return all three outputs concatenated so the reader can decide."
-- **C)** "Combine them into a single coherent response. Resolve any conflicts by preferring the most specific data."
-- **D)** "Ask the agent with the highest self-reported confidence to arbitrate."
+- **A)** "Discard any finding that another agent contradicts, keeping only those that all three agents agree on, even if agreement means omitting important details."
+- **B)** "Return the three outputs concatenated in the order received so the reader can decide which to trust based on their own assessment of the sources."
+- **C)** "Combine them into a single coherent response; resolve conflicts by preferring the most specific data."
+- **D)** "Ask the agent with the highest self-reported confidence to arbitrate the disagreement, deferring fully to its judgment on the conflicting point."
 
 ---
 
@@ -419,10 +419,10 @@ A team wants each of three subagents — searcher, analyst, writer — to be str
 
 Which combination of `AgentDefinition` fields carries that enforcement?
 
-- **A)** `allowedTools` and `disallowedTools`, which are enforced at the platform level rather than by instruction.
-- **B)** The model alias assigned to each agent.
-- **C)** `name` and `description`, which tell the coordinator what each agent is for.
-- **D)** The system prompt alone, since it defines the agent's identity and operating rules.
+- **A)** `allowedTools` and `disallowedTools`, enforced at the platform level independent of any instruction.
+- **B)** The model alias assigned to each agent, since different models have different built-in capabilities that align naturally with different job roles.
+- **C)** `name` and `description`, which tell the coordinator what each agent is for and when to invoke it, creating clear role separation in the coordinator's decision logic.
+- **D)** The system prompt alone, which defines the agent's identity and operating rules completely and is the authoritative source of behavioral constraints.
 
 ---
 
@@ -432,10 +432,10 @@ An agent processing a customer request calls `get_customer`, then `lookup_order`
 
 What does this indicate?
 
-- **A)** The agent ran out of tokens before finishing.
-- **B)** The agent has decided to return a result to the caller, and the loop should terminate.
-- **C)** The agent is waiting for the user to confirm before continuing.
-- **D)** The agent wants to call another tool but lacks permission.
+- **A)** The agent exhausted its token budget before producing a complete response and stopped mid-generation to avoid exceeding the limit.
+- **B)** The agent has finished and is returning a result; the loop should terminate.
+- **C)** The agent is waiting for the user to confirm an action before continuing to the next step in its reasoning chain.
+- **D)** The agent wants to call another tool but lacks the required permission and is signaling that it is blocked from proceeding.
 
 ---
 
@@ -445,10 +445,10 @@ A multi-agent pipeline passes findings between agents as one large blob of prose
 
 What is the root cause?
 
-- **A)** The synthesis agent's context window was too small to hold all findings.
-- **B)** The synthesis agent lacked a web-search tool to verify claims.
-- **C)** The subagents were run in parallel instead of sequentially.
-- **D)** Raw text passing loses attribution, because content and metadata do not travel together.
+- **A)** The synthesis agent's context window was too small to hold all findings at once, forcing it to drop older ones before it could record their origins.
+- **B)** The synthesis agent lacked a web-search tool to verify each claim independently and link it back to the authoritative source document.
+- **C)** Running subagents in parallel instead of sequentially caused attribution to be lost, because each agent's output arrived without positional ordering.
+- **D)** Passing findings as a single prose blob loses attribution, since content and source metadata are not kept together.
 
 ---
 
@@ -458,10 +458,10 @@ A coordinator spawns four subagents to review four independent modules. The team
 
 Which instruction achieves this?
 
-- **A)** Merge the four modules into one review task for a single subagent.
-- **B)** Fork the session four times and run each review in a separate terminal manually.
-- **C)** Instruct the coordinator to run the four subagents concurrently, since the tasks share no dependencies.
-- **D)** Instruct the coordinator to run them sequentially but with a shorter prompt each.
+- **A)** Merge the four modules into one review task for a single subagent, accepting a longer single runtime in exchange for simpler coordination.
+- **B)** Fork the session four times and run each review in a separate terminal manually, coordinating results by hand after all four finish.
+- **C)** Run the four subagents concurrently, since the module reviews share no dependencies.
+- **D)** Run them sequentially with a shorter prompt per subagent to reduce total token usage and overall elapsed time across all four passes.
 
 ---
 
@@ -471,10 +471,10 @@ An engineer notices that after a subagent finishes, the coordinator cannot inspe
 
 Which statement is accurate?
 
-- **A)** The coordinator can always replay a subagent's internal steps from shared memory.
-- **B)** The coordinator inherits the subagent's context automatically when the subagent finishes.
-- **C)** Each subagent runs its own loop in an isolated context, so the coordinator sees the returned result rather than the internal steps; what must be visible has to be part of the subagent's output.
-- **D)** Subagent internals are visible only when the subagents run sequentially.
+- **A)** The coordinator can replay a subagent's internal steps by querying shared memory, since the platform persists all intermediate tool calls to a common store.
+- **B)** The coordinator automatically inherits the subagent's full context when the subagent finishes, including all intermediate messages and tool results from the internal loop.
+- **C)** Each subagent runs in an isolated context, so the coordinator only receives the final output; any intermediate steps that need to be visible must be included in that output.
+- **D)** The subagent's internal steps are only accessible when subagents run sequentially, not in parallel, because sequential mode preserves the log in the shared history.
 
 ---
 
@@ -484,10 +484,10 @@ A workflow must guarantee that a database migration is never applied before a ba
 
 Which implementation satisfies "structurally impossible to skip"?
 
-- **A)** A post-migration check that reports whether a backup existed.
-- **B)** Ordering the tools in the system prompt so backup appears first.
-- **C)** A tool description on the migration tool stating that backup must run first.
-- **D)** A prerequisite gate implemented as a hook that fires before the migration tool and blocks it unless the recorded backup state is present.
+- **A)** A post-migration check that verifies whether a backup was taken during the session, flagging the issue in a report after the migration has already run.
+- **B)** Ordering the tools in the system prompt so the backup tool description appears before migration, signaling to the model that backup is the expected first step.
+- **C)** A note in the migration tool's description stating that a backup must run first, which the model reads and is expected to follow as a strong preference.
+- **D)** A hook that fires before the migration tool and blocks execution unless a recorded backup state is present.
 
 ---
 
@@ -497,10 +497,10 @@ A team is choosing between a fixed three-stage pipeline and an adaptive plan for
 
 Which statement correctly distinguishes them?
 
-- **A)** A fixed plan is preferable because it is easier to observe.
-- **B)** An adaptive plan is simply a fixed plan with more stages.
-- **C)** An adaptive plan requires all subagents to share one context window.
-- **D)** An adaptive plan treats each finding as a signal that reshapes what to do next, while a fixed plan executes the same stages regardless of what is discovered.
+- **A)** A fixed plan is preferable because it is easier to observe and debug, and the predictable stage sequence makes it straightforward to add logging and reproduce failures.
+- **B)** An adaptive plan is simply a fixed plan with more stages added to handle edge cases, so the two approaches differ only in the number of predefined steps.
+- **C)** An adaptive plan requires all subagents to share one context window to coordinate decisions, since each agent must know what the others found before choosing its next action.
+- **D)** An adaptive plan uses each finding to reshape subsequent steps; a fixed plan runs the same stages regardless of what is discovered.
 
 ---
 
@@ -510,10 +510,10 @@ A coordinator agent's prompt says: "When given a task, break it into subtasks an
 
 Which part of the task lifecycle does this prompt address?
 
-- **A)** Task decomposition and delegation, leaving aggregation to a later instruction.
-- **B)** Tool permission enforcement for each subagent.
-- **C)** Session persistence across restarts.
-- **D)** Result aggregation and conflict resolution.
+- **A)** Task decomposition and delegation, while leaving result aggregation to a separate instruction.
+- **B)** Tool permission enforcement, restricting which tools each subagent may access when it receives a delegated subtask.
+- **C)** Session persistence, ensuring that the coordinator's state is preserved across restarts so delegated work is not lost.
+- **D)** Result aggregation and conflict resolution, guiding the coordinator on how to combine outputs once all subagents have returned their findings.
 
 ---
 
@@ -523,10 +523,10 @@ An engineer wants a slash command for deep dependency analysis to run without po
 
 Which configuration achieves this?
 
-- **A)** Wrap the command's output in a collapsed markdown block.
-- **B)** Run the command with a smaller model so it produces less text.
-- **C)** Set `context: fork` in the command's frontmatter so it executes in an isolated subagent context.
-- **D)** Add `/clear` at the end of the command body.
+- **A)** Wrap the command's output in a collapsed markdown section to visually hide it from the terminal display without affecting the tokens consumed.
+- **B)** Run the command with a smaller model so it generates less output text and the context impact on the main session is reduced proportionally.
+- **C)** Set `context: fork` in the frontmatter so the command runs in an isolated subagent context.
+- **D)** Append `/clear` at the end of the command body to wipe the main session's state automatically after the command finishes running.
 
 ---
 
@@ -536,10 +536,10 @@ After resuming a week-old session, an engineer wants the agent to re-analyze onl
 
 Which approach is most efficient and reliable?
 
-- **A)** Run `/compact` so the agent regenerates its understanding of the codebase.
-- **B)** Ask the agent to re-read every file in the module to be safe.
-- **C)** Inject the list of changed files into the resumed session and instruct the agent to re-read those specific files before continuing.
-- **D)** Trust the agent's stored summary of the module from the earlier session.
+- **A)** Run `/compact` so the agent regenerates its understanding of the codebase from the condensed history and picks up recent changes it may have missed.
+- **B)** Ask the agent to re-read every file in the module to ensure nothing is missed, accepting the extra token cost as the price of completeness.
+- **C)** Inject the list of changed files and instruct the agent to re-read only those before continuing.
+- **D)** Trust the agent's stored summary of the module from the earlier session without re-reading, since the summary captures the design intent rather than transient file contents.
 
 ---
 
@@ -549,10 +549,10 @@ A team must decide between having the coordinator run a single subagent, a seque
 
 Which structure best satisfies coverage and latency?
 
-- **A)** A single agent reading all four policies in one context, to avoid coordination overhead.
-- **B)** Four parallel subagents, one per vendor policy, followed by a synthesis step that compares them against the retention rules.
-- **C)** A sequential chain where each agent reads one policy and passes it forward.
-- **D)** Four parallel subagents each given the same brief covering all four vendors.
+- **A)** A single agent reading all four policies in one pass, accepting serialized reads in exchange for simpler result handling and no coordination overhead.
+- **B)** Four parallel subagents, each owning one vendor policy, followed by a synthesis step comparing them against the retention rules.
+- **C)** A sequential chain where each agent reads one policy and passes a running summary to the next, building context cumulatively across the four documents.
+- **D)** Four parallel subagents each given the full brief covering all four vendors, letting each independently produce a full comparison to catch anything the others miss.
 
 ---
 
@@ -562,10 +562,10 @@ A subagent is spawned with `allowedTools: ["Read", "Grep", "Glob"]` but its prom
 
 What is the correct diagnosis?
 
-- **A)** `allowedTools` is advisory, so the real problem is the model choosing not to comply.
-- **B)** The subagent's prompt requires a capability its tool permissions exclude — the task needs Bash, which was not granted.
-- **C)** Grep can run shell commands, so the issue is the subagent's system prompt wording.
-- **D)** The coordinator failed to pass the test file paths.
+- **A)** `allowedTools` is advisory; the real problem is the model choosing not to use the right tool, and rephrasing the prompt would resolve the issue.
+- **B)** The prompt requires Bash to run tests, but `allowedTools` excludes it — the capability and the permission are mismatched.
+- **C)** Grep can run shell commands in some configurations, so the issue is the system prompt wording and not the tool set.
+- **D)** The coordinator failed to pass the test file paths to the subagent, leaving it unable to locate the files it would need to execute.
 
 ---
 
@@ -575,10 +575,10 @@ A long-running agent pipeline writes intermediate findings only into the convers
 
 Which fix addresses the root cause?
 
-- **A)** Disable auto-compaction so history is never summarized.
-- **B)** Instruct the coordinator to remember what it has already delegated.
-- **C)** Persist findings in a structured state object outside the conversation, and have the coordinator read that state to decide what remains.
-- **D)** Increase the model's context window by switching to a 1M-token variant.
+- **A)** Disable auto-compaction so the conversation history is never summarized or truncated, preserving every delegation record for the coordinator to reference.
+- **B)** Instruct the coordinator to remember what it has already delegated and avoid repeating it, relying on its in-context memory to prevent duplication.
+- **C)** Persist findings in a structured state object outside the conversation and have the coordinator consult it before delegating.
+- **D)** Switch to a 1M-token model so the full history fits without ever being compacted, eliminating the risk of any record being lost to summarization.
 
 ---
 
@@ -588,10 +588,10 @@ An engineer is told that "Task" and "Agent" appear interchangeably in code sampl
 
 Which statement is accurate?
 
-- **A)** Task is the legacy name for the tool now called Agent; both refer to spawning a subagent with its own isolated context, system prompt, and tool set.
-- **B)** Task spawns a subagent while Agent defines one without spawning it.
-- **C)** Task runs synchronously and Agent always runs in the background.
-- **D)** They are different tools: Task manages the todo list, Agent spawns subagents.
+- **A)** Task is the legacy name for what is now called Agent; both spawn a subagent with isolated context, system prompt, and tools.
+- **B)** Task spawns a subagent while Agent only defines one without executing it, so they serve complementary roles in the same lifecycle step.
+- **C)** Task runs synchronously while Agent always runs in the background asynchronously, making them suitable for different concurrency patterns.
+- **D)** They are unrelated: Task manages the coordinator's to-do list while Agent is the mechanism that actually spawns and communicates with subagents.
 
 ---
 
@@ -601,10 +601,10 @@ A support agent is told: "Never issue a refund above $500 without escalating." L
 
 Which mechanism makes the limit reliable?
 
-- **A)** A gate in front of the refund tool that rejects any call above the threshold, independent of what the model decided.
-- **B)** Adding a few-shot example showing a refused $900 refund.
-- **C)** Restating the rule in bold at the start and end of the system prompt.
-- **D)** Lowering the model's temperature so it follows instructions more strictly.
+- **A)** A gate that intercepts every call to the refund tool and rejects it if the amount exceeds the threshold.
+- **B)** A few-shot example in the system prompt showing a correctly refused $900 refund, training the model to recognize and decline similar requests.
+- **C)** Restating the rule in bold at the start and end of the system prompt, ensuring the model encounters the constraint regardless of where attention is focused.
+- **D)** Lowering the model's temperature so it adheres to instructions more consistently and is less likely to be swayed by persuasive customer language.
 
 ---
 
@@ -614,10 +614,10 @@ Three subagents return findings. The coordinator must produce a report where eac
 
 Which subagent output design supports this?
 
-- **A)** Raw tool output forwarded verbatim from each subagent.
-- **B)** Structured objects carrying the claim together with its source metadata — identifier, source url or document, and confidence — rather than prose.
-- **C)** Long prose summaries, since they read more naturally in the final report.
-- **D)** A single confidence number per subagent covering all of its findings.
+- **A)** Raw tool output forwarded verbatim from each subagent to the coordinator, preserving the original response without any transformation that might lose detail.
+- **B)** Structured objects pairing each claim with its source metadata: agent id, document or URL, and confidence score.
+- **C)** Prose summaries from each subagent, since they integrate more naturally into the final report and a skilled writer can weave attribution into the narrative.
+- **D)** A single confidence score per subagent summarizing the overall reliability of all its findings, allowing the coordinator to weight each agent's contribution accordingly.
 
 ---
 
@@ -627,10 +627,10 @@ A coordinator must handle a task whose scope is unknown until work begins: "Find
 
 Which decomposition strategy is appropriate?
 
-- **A)** Run the same broad brief across five agents and pick the longest answer.
-- **B)** Generate subtasks dynamically as findings arrive, stopping when new investigation produces no new signal.
-- **C)** Fix a list of ten subtasks up front and run all of them.
-- **D)** Run one subagent with a very long prompt covering every hypothesis.
+- **A)** Send the same broad brief to five agents in parallel and pick whichever returns the longest answer, since length correlates with thoroughness for open-ended investigations.
+- **B)** Generate subtasks dynamically as findings arrive, stopping when further investigation yields no new signal.
+- **C)** Define a fixed list of ten subtasks up front covering all likely hypotheses and run them all, ensuring systematic coverage even if some subtasks turn out to be irrelevant.
+- **D)** Run a single subagent with a very long prompt enumerating every possible hypothesis at once, so the full investigation fits in one context window and avoids coordination overhead.
 
 ---
 
@@ -653,10 +653,10 @@ After a crash, a pipeline resumes and must not redo completed work. The team deb
 
 Which reasoning is correct?
 
-- **A)** State should live in the system prompt, which is re-sent on every request.
-- **B)** Conversation history is sufficient, because resumed sessions restore it in full.
-- **C)** Either works, since compaction preserves all tool results verbatim.
-- **D)** External durable state is required, because conversation history can be compacted or truncated and is not a reliable record of completed steps.
+- **A)** State should live in the system prompt, which is re-sent on every API request and is therefore always available regardless of what happened to the conversation history.
+- **B)** Conversation history is sufficient because resumed sessions restore it completely, and the coordinator can scan the transcript to identify which steps already produced results.
+- **C)** Either location works, since compaction preserves all tool results verbatim and the coordinator can always find completed steps in the history even after summarization.
+- **D)** External durable state is required; conversation history can be compacted or truncated and is not a reliable record of what has been completed.
 
 ---
 
@@ -666,10 +666,10 @@ A coordinator is instructed: "You have received outputs from multiple agents. Co
 
 Which stage of the coordinator's lifecycle is this?
 
-- **A)** Agent selection.
-- **B)** Result aggregation.
-- **C)** Tool permission scoping.
-- **D)** Task decomposition.
+- **A)** Agent selection — choosing which subagents to invoke for the task based on the query's requirements.
+- **B)** Result aggregation — combining multiple agent outputs into one response.
+- **C)** Tool permission scoping — deciding which tools each subagent may access before delegation begins.
+- **D)** Task decomposition — breaking the original task into subtasks before any agent is invoked.
 
 ---
 
@@ -679,10 +679,10 @@ A team observes that when subagents run in parallel, they cannot watch what each
 
 Which mitigation is appropriate?
 
-- **A)** Increase the coordinator's iteration cap.
-- **B)** Switch to sequential execution permanently.
-- **C)** Require each subagent to return a structured record of the steps it took alongside its findings, so the coordinator has an inspectable trace after the fact.
-- **D)** Give subagents direct channels to each other so they can report progress.
+- **A)** Increase the coordinator's iteration cap to allow more time for a human to attach a debugger and inspect the running subagents before they finish.
+- **B)** Switch to sequential execution permanently so each subagent can be monitored in turn, accepting the latency cost as necessary for adequate visibility.
+- **C)** Require each subagent to return a structured step log alongside its findings, giving the coordinator an inspectable trace after the fact.
+- **D)** Give subagents direct channels to each other so they can report progress in real time and surface issues before the coordinator collects final results.
 
 ---
 
@@ -692,10 +692,10 @@ An engineer creates a subagent whose system prompt is empty and whose descriptio
 
 What is the design error?
 
-- **A)** The agent needs a larger context window.
-- **B)** The coordinator should invoke it more often so it learns the pattern.
-- **C)** The `AgentDefinition` fails to constrain the agent to a designated role, so neither the coordinator's selection nor the agent's behavior is bounded.
-- **D)** The agent's tools should be expanded so it can handle any task.
+- **A)** The subagent needs a larger context window to handle diverse tasks reliably, since each task type requires different amounts of context to perform well.
+- **B)** The coordinator should invoke it more often so it learns the expected patterns over time, improving quality through repeated exposure to the task distribution.
+- **C)** Without a proper `AgentDefinition`, the agent's role is unconstrained — neither selection nor behavior is bounded to a specific domain.
+- **D)** The agent's tool set should be expanded so it can handle any type of task assigned to it without encountering missing-capability errors.
 
 ---
 
@@ -705,10 +705,10 @@ A team wants to verify that a coordinator's decomposition covered everything bef
 
 Where can this check be placed, according to the coordinator lifecycle?
 
-- **A)** Either before delegation, via a review tool on the proposed task list, or during aggregation, as a gap check before producing the answer.
-- **B)** Only inside each subagent, since they know their own scope.
-- **C)** Only in the user's follow-up question.
-- **D)** Only at the API level, via `stop_reason`.
+- **A)** At either point: before delegation via a task-list review tool, or during aggregation as a gap check before the answer is produced.
+- **B)** Only inside each subagent, since each one knows its own scope best and is the only component that can detect when its assigned slice is incomplete.
+- **C)** Only through the user's follow-up question after the report is delivered, since the coordinator cannot assess its own coverage from inside the same reasoning context.
+- **D)** Only at the API level by inspecting `stop_reason` after each turn, since that field signals whether the model believes it has finished all necessary work.
 
 ---
 
@@ -718,10 +718,10 @@ An engineer resumes a session and the agent confidently continues from an assump
 
 Which statement explains the risk?
 
-- **A)** Resuming a session always reloads the current state of every file referenced earlier.
-- **B)** Sessions expire after 24 hours, so the agent should have refused to resume.
-- **C)** Claude has no awareness of elapsed time or of changes made outside the session, so resumed context can be silently stale.
-- **D)** The agent's confidence score would have flagged the staleness if it had been enabled.
+- **A)** Resuming a session always reloads the current state of every file that was previously read, so any drift would be caught automatically on the first file access.
+- **B)** Sessions expire after 24 hours, so the agent should have refused to resume the old one and prompted the user to start fresh.
+- **C)** Claude has no awareness of elapsed time or external changes; resumed context can be silently stale.
+- **D)** The agent's confidence score feature would have flagged the staleness automatically if the feature flag had been enabled in the session configuration.
 
 ---
 
@@ -731,10 +731,10 @@ A coordinator delegates to a subagent and needs the subagent's answer before it 
 
 Which statement describes this correctly?
 
-- **A)** Subagents always block the parent, so parallelism must be implemented outside the agent framework.
-- **B)** Subagents always run in the background and the parent can never block.
-- **C)** The parent may block while waiting for a subagent, or spawn several and parallelize; both patterns are supported and the choice depends on whether a dependency exists.
-- **D)** Parallel subagents automatically share their partial results with each other.
+- **A)** Subagents always block the parent, so any parallelism must be implemented outside the agent framework using threads or async constructs in the host application.
+- **B)** Subagents always run in the background; the parent can never block waiting for one and must poll for results on a timer or callback.
+- **C)** The parent can block on a single subagent or fire several in parallel; both modes are supported, and the choice depends on dependency.
+- **D)** When running in parallel, subagents automatically share partial results with each other as they progress, enabling them to coordinate without involving the parent coordinator.
 
 ---
 
@@ -742,10 +742,10 @@ Which statement describes this correctly?
 
 A team implements a `PostToolUse` hook after their deployment tool. What is the most appropriate use of that hook?
 
-- **A)** Rewriting the deployment tool's input parameters before execution.
-- **B)** Blocking the deployment when prerequisites are missing.
-- **C)** Choosing which model the agent uses for the next turn.
-- **D)** Recording the result and updating workflow state after the tool ran, so later gates can check what has been completed.
+- **A)** Rewriting the deployment tool's input parameters to correct them before execution starts, since PostToolUse has access to the parameters before they are sent to the tool.
+- **B)** Blocking the deployment call when required prerequisites have not been met yet, intercepting the call before the tool runs and returning an error to the model.
+- **C)** Selecting which model the agent should use for its next reasoning turn, since PostToolUse can inject model-selection directives into the subsequent request.
+- **D)** Recording the deployment result and updating workflow state so subsequent gates know it completed.
 
 ---
 
@@ -755,10 +755,10 @@ A research system's coordinator is the only component that talks to the outside 
 
 Which answer is correct?
 
-- **A)** Information flow is controlled by the model's system prompt in each subagent.
-- **B)** The coordinator is the single point where every message in and out passes, so information-flow policy can be enforced and inspected there.
-- **C)** Each subagent enforces its own policy, since it knows its own scope best.
-- **D)** Trust boundaries are enforced by the size of each subagent's context window.
+- **A)** Each subagent's system prompt defines what information it may send or receive, and because the coordinator enforces which prompts are used, control flows indirectly from the prompt design.
+- **B)** Because every inbound and outbound message flows through the coordinator, information-flow policy can be enforced and audited in one place.
+- **C)** Each subagent independently enforces its own information-flow policy, since it alone knows its scope and can decide which findings to include in its response.
+- **D)** Trust boundaries are enforced by limiting the size of each subagent's context window, preventing it from accumulating enough information to leak sensitive data.
 
 ---
 
@@ -768,10 +768,10 @@ A team must choose between plan mode, direct execution, and a multi-phase workfl
 
 Which choice is proportionate?
 
-- **A)** A forked session per file, to isolate the changes.
-- **B)** Plan mode, because every change should be approved first.
-- **C)** A multi-phase workflow with a dedicated review agent.
-- **D)** Direct execution, because the scope is small, the risk is low, and tests verify the result.
+- **A)** A forked session for each file, to keep the two rename operations fully isolated and independently reversible.
+- **B)** Plan mode, to get explicit approval before any change is made, since even a rename can have unexpected downstream effects worth reviewing.
+- **C)** A multi-phase workflow with a dedicated review agent checking each phase, ensuring no rename cascades into unexpected call sites.
+- **D)** Direct execution — scope is small, risk is low, and the existing tests cover the result.
 
 ---
 
@@ -781,10 +781,10 @@ An agent's loop is implemented so that whenever the API response contains any te
 
 What behavior will this produce?
 
-- **A)** The loop will frequently exit before executing tool calls, because Claude often emits text alongside a `tool_use` block in the same response.
-- **B)** The loop will never terminate, because text always accompanies tool calls.
-- **C)** The loop will terminate only when the model reaches its iteration cap.
-- **D)** The loop will behave correctly, since text only appears on the final turn.
+- **A)** The loop will frequently exit early, before tool calls run, because Claude often emits text in the same response as a `tool_use` block.
+- **B)** The loop will run forever, because text always accompanies every tool call the model emits and the exit condition is therefore never reached.
+- **C)** The loop will run until the iteration cap is hit, since text responses delay but never stop the loop from eventually reaching the final tool call.
+- **D)** The loop will behave correctly — text only appears on the final turn, never alongside tool calls, so the exit condition reliably identifies completion.
 
 ---
 
