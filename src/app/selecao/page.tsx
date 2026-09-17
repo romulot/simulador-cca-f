@@ -33,7 +33,7 @@ function TelaSelecao() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cursoParam = searchParams.get("curso");
-  const curso: CursoId = cursoParam && cursoIdValido(cursoParam) ? cursoParam : "curso-antigo";
+  const curso: CursoId = cursoParam && cursoIdValido(cursoParam) ? cursoParam : "exame-avancado";
 
   const [grupos, setGrupos] = useState<GrupoResumo[] | null>(null);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());

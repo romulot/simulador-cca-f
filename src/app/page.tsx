@@ -47,7 +47,7 @@ interface EntradaHistoricoResumo {
 
 export default function Menu() {
   const router = useRouter();
-  const [curso, setCurso] = useState<CursoId>("curso-antigo");
+  const [curso, setCurso] = useState<CursoId>("exame-avancado");
   const [totais, setTotais] = useState<TotaisCatalogo | null>(null);
   const [ultima, setUltima] = useState<EntradaHistoricoResumo | null>(null);
   const [totalRodadas, setTotalRodadas] = useState(0);
