@@ -25,6 +25,7 @@ export interface QuestaoDetalhe {
   dominio: number | null;
   numero: number;
   enunciado: string;
+  casoBase?: string | null;
   alternativas: AlternativasPorLetra;
   correta: Letra;
   resumo: string;
@@ -72,6 +73,7 @@ export function montarDetalheRodada(persistida: RodadaPersistida): DetalheRodada
     dominio: ocultarDominio ? null : q.dominio,
     numero: q.numero,
     enunciado: q.enunciado,
+    casoBase: q.casoBase ?? null,
     alternativas: q.alternativas,
     correta: q.correta,
     resumo: q.resumo,

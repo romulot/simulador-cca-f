@@ -7,10 +7,11 @@ import { agrupar, cursoIdValido, descobrir, raizDoCurso } from "./index";
 const RAIZ_REAL = join(process.cwd(), "content/simulados");
 
 describe("descobrir — corpus real", () => {
-  it("encontra os 35 pares reais, todos válidos, somando 240 questões", () => {
+  it("encontra 35 pares válidos e um rascunho sem gabarito, somando 240 questões válidas", () => {
     const pares = descobrir(RAIZ_REAL);
-    expect(pares).toHaveLength(35);
-    expect(pares.every((p) => p.erro === null)).toBe(true);
+    expect(pares).toHaveLength(36);
+    expect(pares.filter((p) => p.erro === null)).toHaveLength(35);
+    expect(pares.find((p) => p.nome === "simulado_geral_01")?.erro).not.toBeNull();
 
     const totalQuestoes = pares.reduce((acc, p) => acc + p.questoes.length, 0);
     expect(totalQuestoes).toBe(240);
@@ -25,6 +26,7 @@ describe("descobrir — corpus real", () => {
       "Domínio 3",
       "Domínio 4",
       "Domínio 5",
+      "simulados",
     ]);
     // Nenhum grupo vazio, nenhum par perdido na hora de agrupar.
     const totalNosGrupos = grupos.reduce((acc, [, ps]) => acc + ps.length, 0);

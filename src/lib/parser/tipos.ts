@@ -33,6 +33,8 @@ export interface Questao {
   /** numeração dentro do arquivo de origem */
   numero: number;
   enunciado: string;
+  /** Texto compartilhado pelas questões de um caso; snapshot por rodada. */
+  casoBase?: string | null;
   alternativas: AlternativasPorLetra;
   /** letra da alternativa correta */
   correta: Letra;
@@ -60,6 +62,7 @@ export interface Questao {
 export interface QuestaoSimulado {
   numero: number;
   enunciado: string;
+  casoBase?: string | null;
   alternativas: AlternativasPorLetra;
 }
 

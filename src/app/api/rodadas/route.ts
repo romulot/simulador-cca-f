@@ -113,23 +113,37 @@ async function postInterno(request: Request): Promise<Response> {
 
   if (modo === "aleatorio") {
     const corpoObj = corpo as Record<string, unknown>;
-    const quantidade = corpoObj.quantidade;
-    if (typeof quantidade !== "number" || !Number.isInteger(quantidade) || quantidade <= 0) {
-      return respostaErro(400, "'quantidade' deve ser um inteiro positivo");
-    }
+    if ("caso" in corpoObj) {
+      if (curso !== "exame-avancado" || corpoObj.caso !== "caso-atendimento") {
+        return respostaErro(400, "caso desconhecido para este curso");
+      }
+      const par = paresDisponiveis.find((p) => p.nome === corpoObj.caso && p.erro === null);
+      if (!par || par.questoes.length === 0) {
+        return respostaErro(422, "caso indisponível");
+      }
+      questoes = par.questoes;
+      limiteSegundos = questoes.length * SEGUNDOS_POR_QUESTAO_AVALIATIVA;
+    } else {
+      const quantidade = corpoObj.quantidade;
+      if (typeof quantidade !== "number" || !Number.isInteger(quantidade) || quantidade <= 0) {
+        return respostaErro(400, "'quantidade' deve ser um inteiro positivo");
+      }
 
-    const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes);
-    if (validas.length === 0) {
-      return respostaErro(422, "nenhuma questão disponível para montar a rodada aleatória");
-    }
-    if (quantidade > validas.length) {
-      return respostaErro(400, `'quantidade' não pode exceder ${validas.length}`);
-    }
+    // Casos são indivisíveis: sorteio de questões soltas não deve extrair
+    // perguntas sem o restante do contexto sequencial.
+      const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes).filter((q) => !q.casoBase);
+      if (validas.length === 0) {
+        return respostaErro(422, "nenhuma questão disponível para montar a rodada aleatória");
+      }
+      if (quantidade > validas.length) {
+        return respostaErro(400, `'quantidade' não pode exceder ${validas.length}`);
+      }
 
-    questoes = embaralhar(validas, rng).slice(0, quantidade);
-    limiteSegundos = quantidade * SEGUNDOS_POR_QUESTAO_AVALIATIVA;
+      questoes = embaralhar(validas, rng).slice(0, quantidade);
+      limiteSegundos = quantidade * SEGUNDOS_POR_QUESTAO_AVALIATIVA;
+    }
   } else if (modo === "prova") {
-    const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes);
+    const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes).filter((q) => !q.casoBase);
     const poolPorDominio = pool(validas);
     const resultado = sortear(poolPorDominio, rng);
 
@@ -176,7 +190,7 @@ async function postInterno(request: Request): Promise<Response> {
       }
 
       const selecionadas = paresPedidos.flatMap((nome) => porNome.get(nome)!.questoes);
-      questoes = embaralhar(selecionadas, rng);
+      questoes = selecionadas.some((q) => q.casoBase) ? selecionadas : embaralhar(selecionadas, rng);
     } else if ("topicoId" in corpoObj) {
       // Fase 9 — "Praticar este tópico": até `quantidade` questões daquele
       // tópico em todo o corpus, priorizadas por selecionarParaPraticar().

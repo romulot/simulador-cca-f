@@ -9,12 +9,14 @@
  * de uma execução anterior interrompida.
  */
 import { Pool } from "pg";
+import { migrar } from "./migrate";
 
 export async function setup() {
   const connectionString =
     process.env.DATABASE_URL ?? "postgres://postgres:simulador@localhost:5433/simulador";
   const pool = new Pool({ connectionString });
   try {
+    await migrar(pool);
     await pool.query("DELETE FROM usuarios WHERE email LIKE 'teste-%'");
   } finally {
     await pool.end();
