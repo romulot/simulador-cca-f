@@ -36,6 +36,7 @@ describe("migrate", () => {
       "007_acesso_restrito.sql",
       "008_modo_aleatorio.sql",
       "009_curso_rodadas.sql",
+      "010_caso_base_questoes.sql",
     ]);
   });
 
