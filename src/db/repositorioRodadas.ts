@@ -100,6 +100,7 @@ interface LinhaQuestaoRodada {
   dominio: number | null;
   numero: number;
   enunciado: string;
+  caso_base: string | null;
   alternativas_json: string;
   correta: string;
   resumo: string;
@@ -138,6 +139,7 @@ interface LinhaQuestaoAtual {
   dominio: number | null;
   numero: number;
   enunciado: string;
+  caso_base: string | null;
   alternativas_json: string;
 }
 
@@ -160,6 +162,7 @@ export interface EstadoRodadaLeve {
     dominio: number | null;
     numero: number;
     enunciado: string;
+    casoBase?: string | null;
     alternativas: Record<Letra, string>;
   } | null;
 }
@@ -170,6 +173,7 @@ function linhaParaQuestao(linha: LinhaQuestaoRodada): Questao {
     dominio: linha.dominio,
     numero: linha.numero,
     enunciado: linha.enunciado,
+    casoBase: linha.caso_base,
     alternativas: JSON.parse(linha.alternativas_json),
     correta: linha.correta as Letra,
     resumo: linha.resumo,
@@ -220,12 +224,12 @@ export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promis
       const q = params.questoes[posicao];
       await client.query(
         `INSERT INTO questoes_rodada
-           (rodada_id, posicao, origem, dominio, numero, enunciado,
+           (rodada_id, posicao, origem, dominio, numero, enunciado, caso_base,
             alternativas_json, correta, resumo, explicacoes_json,
             bloom, dificuldade, rubrica, cenario, principio_testado, topicos_json,
             arquetipos_json)
          VALUES
-           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+           ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           rodadaId,
           posicao,
@@ -233,6 +237,7 @@ export async function criarRodada(pool: Pool, params: CriarRodadaParams): Promis
           q.dominio,
           q.numero,
           q.enunciado,
+          q.casoBase ?? null,
           JSON.stringify(q.alternativas),
           q.correta,
           q.resumo,
@@ -380,6 +385,7 @@ export async function carregarEstadoRodadaLeve(
             qr.dominio,
             qr.numero,
             qr.enunciado,
+            qr.caso_base,
             qr.alternativas_json
        FROM questoes_rodada qr
        JOIN rodadas r ON r.id = qr.rodada_id
@@ -414,6 +420,7 @@ export async function carregarEstadoRodadaLeve(
           dominio: questao.dominio,
           numero: questao.numero,
           enunciado: questao.enunciado,
+          casoBase: questao.caso_base,
           alternativas: JSON.parse(questao.alternativas_json),
         }
       : null,

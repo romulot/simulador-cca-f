@@ -17,6 +17,7 @@ export interface QuestaoCliente {
   dominio: number | null;
   numero: number;
   enunciado: string;
+  casoBase?: string | null;
   alternativas: AlternativasPorLetra;
 }
 
@@ -27,6 +28,7 @@ export function paraQuestaoCliente(questao: Questao, posicao: number): QuestaoCl
     dominio: questao.dominio,
     numero: questao.numero,
     enunciado: questao.enunciado,
+    casoBase: questao.casoBase ?? null,
     alternativas: questao.alternativas,
   };
 }

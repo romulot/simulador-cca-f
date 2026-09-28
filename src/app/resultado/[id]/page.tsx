@@ -28,6 +28,7 @@ interface QuestaoDetalhe {
   dominio: number | null;
   numero: number;
   enunciado: string;
+  casoBase?: string | null;
   alternativas: Record<Letra, string>;
   correta: Letra;
   resumo: string;
@@ -331,6 +332,7 @@ export default function TelaResultado() {
                     </span>
                   )}
                 </div>
+                {q.casoBase && <details className="painel" open><summary>Texto base do caso</summary><div className="texto-quebra"><TextoMarkdownInline texto={q.casoBase} /></div></details>}
                 <p><TextoMarkdownInline texto={q.enunciado} /></p>
                 <div className="pilha">
                   {(Object.keys(q.alternativas) as Letra[]).map((letra) => {

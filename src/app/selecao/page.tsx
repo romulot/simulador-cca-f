@@ -36,6 +36,7 @@ function TelaSelecao() {
   const curso: CursoId = cursoParam && cursoIdValido(cursoParam) ? cursoParam : "exame-avancado";
 
   const [grupos, setGrupos] = useState<GrupoResumo[] | null>(null);
+  const [casoPilotoDisponivel, setCasoPilotoDisponivel] = useState(false);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [iniciando, setIniciando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -44,7 +45,7 @@ function TelaSelecao() {
   useEffect(() => {
     fetch(`/api/catalogo?curso=${curso}`)
       .then((r) => r.json())
-      .then((corpo) => setGrupos(corpo.grupos));
+      .then((corpo) => { setGrupos(corpo.grupos); setCasoPilotoDisponivel(corpo.casoPilotoDisponivel === true); });
   }, [curso]);
 
   function alternar(nome: string) {
@@ -119,6 +120,24 @@ function TelaSelecao() {
     }
   }
 
+  async function iniciarCasoPiloto() {
+    setIniciando(true);
+    setErro(null);
+    try {
+      const resposta = await fetch("/api/rodadas", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ modo: "pratica", pares: ["caso-atendimento"], curso }),
+      });
+      const corpo = await resposta.json();
+      if (!resposta.ok) throw new Error(corpo.erro ?? "não foi possível iniciar o caso");
+      router.push(`/rodada/${corpo.rodadaId}`);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "falha de rede");
+      setIniciando(false);
+    }
+  }
+
   const totalDisponivel =
     grupos?.flatMap((g) => g.pares).reduce((acc, p) => acc + p.totalQuestoes, 0) ?? 0;
 
@@ -135,6 +154,15 @@ function TelaSelecao() {
 
           {grupos === null && <p className="texto-fraco">Carregando…</p>}
 
+          {grupos !== null && (
+            <div className="painel pilha">
+              <h2>Caso piloto — agente de atendimento</h2>
+              <p className="texto-fraco">10 decisões sobre um mesmo sistema. O texto base permanece disponível durante toda a rodada.</p>
+              <button type="button" className="botao botao-primario" disabled={iniciando || !casoPilotoDisponivel} onClick={iniciarCasoPiloto}>
+                {iniciando ? "Iniciando…" : "Iniciar caso piloto"}
+              </button>
+            </div>
+          )}
           {grupos !== null && (
             <div className="painel pilha">
               <p className="texto-fraco">

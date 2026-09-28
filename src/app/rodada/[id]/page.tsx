@@ -27,6 +27,7 @@ interface QuestaoCliente {
   dominio: number | null;
   numero: number;
   enunciado: string;
+  casoBase?: string | null;
   alternativas: Record<Letra, string>;
 }
 
@@ -272,6 +273,13 @@ export default function TelaRodada() {
         </div>
 
         <Trilha celulas={celulasDeRespostas(estado.respostas, estado.indiceAtual)} />
+
+        {questaoAtual.casoBase && (
+          <details className="painel pilha" open>
+            <summary><strong>Texto base do caso — consulte durante as questões</strong></summary>
+            <div className="texto-quebra"><TextoMarkdownInline texto={questaoAtual.casoBase} /></div>
+          </details>
+        )}
 
         <section className="painel pilha">
           <p className="texto-quebra" style={{ fontSize: "1.05rem" }}>

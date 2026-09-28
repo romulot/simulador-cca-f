@@ -107,6 +107,17 @@ function juntar(corpo: string[], indice: number, primeiro: string): string {
 /** Lista de questões do simulado, na ordem do arquivo. */
 export function parseSimulado(texto: string, arquivo = "<memória>"): QuestaoSimulado[] {
   const resultado: QuestaoSimulado[] = [];
+  // Um caso por arquivo: o bloco anterior à primeira Q é compartilhado.
+  // O marcador explícito evita tratar prefácios dos simulados antigos como caso.
+  const marcador = /^## Caso base\s*$/m.exec(texto);
+  const primeiraQuestao = /^## Q\d+\b/m.exec(texto);
+  const casoBase = marcador && primeiraQuestao && marcador.index < primeiraQuestao.index
+    ? texto.slice(marcador.index + marcador[0].length, primeiraQuestao.index)
+        .replace(/\n---\s*$/, "").trim()
+    : null;
+  if (marcador && !casoBase) {
+    throw new FormatoInvalido(arquivo, null, "caso base vazio");
+  }
 
   for (const { numero, corpo } of blocos(texto)) {
     const primeiraOpcao = corpo.findIndex((l) => OPT.test(l.trim()));
@@ -138,7 +149,7 @@ export function parseSimulado(texto: string, arquivo = "<memória>"): QuestaoSim
       throw new FormatoInvalido(arquivo, numero, `alternativas vazias ${JSON.stringify(vazias)}`);
     }
 
-    resultado.push({ numero, enunciado, alternativas });
+    resultado.push({ numero, enunciado, alternativas, casoBase });
   }
 
   return resultado;
@@ -415,6 +426,7 @@ export function carregarPar(caminhoSimulado: string, caminhoGabarito: string): Q
       dominio,
       numero: q.numero,
       enunciado: q.enunciado,
+      casoBase: q.casoBase,
       alternativas: q.alternativas,
       correta: g.correta,
       resumo: g.resumo,

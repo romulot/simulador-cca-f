@@ -15,13 +15,16 @@ const BLOOM_VALIDOS = new Set(["Lembrar", "Aplicar", "Analisar", "Avaliar"]);
 const DIFICULDADE_VALIDAS = new Set(["Fácil", "Médio", "Difícil"]);
 
 describe("descobrir — corpus content/exame-avancado (Tarefas 5 e 6)", () => {
-  it("encontra os 5 pares, todos válidos, somando 300 questões", () => {
+  it("encontra 5 blocos avulsos e o caso piloto, todos válidos", () => {
     const pares = descobrir(RAIZ);
-    expect(pares).toHaveLength(5);
+    expect(pares).toHaveLength(6);
     expect(pares.every((p) => p.erro === null)).toBe(true);
 
     const totalQuestoes = pares.reduce((acc, p) => acc + p.questoes.length, 0);
-    expect(totalQuestoes).toBe(300);
+    expect(totalQuestoes).toBe(310);
+    const caso = pares.find((p) => p.nome === "caso-atendimento");
+    expect(caso?.questoes).toHaveLength(10);
+    expect(caso?.questoes.every((q) => q.casoBase?.includes("stateless workers"))).toBe(true);
   });
 
   it("agrupa em 5 domínios internamente (dado de cálculo — nunca exibido nesta trilha, ver Tarefa 8)", () => {
@@ -69,7 +72,7 @@ describe("descobrir — corpus content/exame-avancado (Tarefas 5 e 6)", () => {
       }
     }
 
-    expect(totalErradas).toBe(900); // 300 questões × 3 alternativas erradas
+    expect(totalErradas).toBe(930); // 310 questões × 3 alternativas erradas
     expect(totalTageadas).toBeGreaterThanOrEqual(850); // ~99% coberto nesta curadoria
   });
 });
