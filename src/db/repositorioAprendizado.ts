@@ -36,7 +36,7 @@ export async function respostasBrutas(pool: Pool, userId: number): Promise<Respo
      FROM questoes_rodada qr
      JOIN rodadas r ON r.id = qr.rodada_id
      WHERE r.user_id = $1 AND r.status = 'finalizada' AND r.arquivada = FALSE AND qr.resposta IS NOT NULL
-     ORDER BY qr.rodada_id ASC`,
+     ORDER BY qr.rodada_id ASC, qr.posicao ASC`,
     [userId],
   );
 
