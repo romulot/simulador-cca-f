@@ -14,9 +14,9 @@
  *     questões cuja última tentativa do usuário foi errada
  *     (`questoesEmRevisao`).
  *
- * Modo prova: recebe `{ modo: "prova" }`, aplica `sortear()` (cotas por
- * domínio, método do maior resto, déficit nunca redistribuído) sobre TODO o
- * corpus válido disponível.
+ * Modo prova: no curso antigo, aplica `sortear()` sobre o corpus válido;
+ * no Exame Avançado, seleciona quatro casos inteiros, com 60 questões e
+ * cotas por domínio, preservando a ordem interna de cada caso.
  *
  * Modo aleatório: recebe `{ modo: "aleatorio", quantidade: number }` e
  * amostra, sem reposição nem pesos, todo o corpus válido. É avaliativo como
@@ -40,6 +40,7 @@ import {
   pool,
   SEGUNDOS_POR_QUESTAO_AVALIATIVA,
   sortear,
+  sortearCasos,
 } from "@/domain/sorteio";
 import {
   QUANTIDADE_PRATICAR_PADRAO,
@@ -114,7 +115,7 @@ async function postInterno(request: Request): Promise<Response> {
   if (modo === "aleatorio") {
     const corpoObj = corpo as Record<string, unknown>;
     if ("caso" in corpoObj) {
-      if (curso !== "exame-avancado" || corpoObj.caso !== "caso-atendimento") {
+      if (curso !== "exame-avancado" || typeof corpoObj.caso !== "string" || !corpoObj.caso.startsWith("caso-")) {
         return respostaErro(400, "caso desconhecido para este curso");
       }
       const par = paresDisponiveis.find((p) => p.nome === corpoObj.caso && p.erro === null);
@@ -129,8 +130,8 @@ async function postInterno(request: Request): Promise<Response> {
         return respostaErro(400, "'quantidade' deve ser um inteiro positivo");
       }
 
-    // Casos são indivisíveis: sorteio de questões soltas não deve extrair
-    // perguntas sem o restante do contexto sequencial.
+      // Casos são indivisíveis: sorteio de questões soltas não deve extrair
+      // perguntas sem o restante do contexto sequencial.
       const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes).filter((q) => !q.casoBase);
       if (validas.length === 0) {
         return respostaErro(422, "nenhuma questão disponível para montar a rodada aleatória");
@@ -143,12 +144,14 @@ async function postInterno(request: Request): Promise<Response> {
       limiteSegundos = quantidade * SEGUNDOS_POR_QUESTAO_AVALIATIVA;
     }
   } else if (modo === "prova") {
-    const validas = paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes).filter((q) => !q.casoBase);
-    const poolPorDominio = pool(validas);
-    const resultado = sortear(poolPorDominio, rng);
+    const resultado = curso === "exame-avancado"
+      ? sortearCasos(paresDisponiveis.filter((p) => p.erro === null).map((p) => p.questoes), rng)
+      : sortear(pool(paresDisponiveis.filter((p) => p.erro === null).flatMap((p) => p.questoes)), rng);
 
-    if (resultado.questoes.length === 0) {
-      return respostaErro(422, "nenhuma questão disponível para montar a prova");
+    if (!resultado || resultado.questoes.length === 0) {
+      return respostaErro(422, curso === "exame-avancado"
+        ? "casos insuficientes para montar uma prova de 60 questões"
+        : "nenhuma questão disponível para montar a prova");
     }
 
     questoes = resultado.questoes;

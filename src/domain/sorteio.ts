@@ -201,3 +201,55 @@ export function sortear(
     questoes: embaralhar(sorteadas, rng),
   };
 }
+
+/** Monta 60 questões de quatro casos inteiros, sem quebrar a sequência
+ * interna. Entre combinações válidas, prefere a que mais se aproxima dos
+ * pesos por domínio; o RNG desempata e embaralha somente a ordem dos casos. */
+export function sortearCasos(
+  casos: Questao[][],
+  rng: Rng,
+  total = TOTAL_PROVA,
+): Composicao | null {
+  const elegiveis = casos.filter((qs) =>
+    qs.length >= 10 && qs.length <= 20 &&
+    qs.every((q) => q.casoBase && q.casoBase === qs[0].casoBase),
+  );
+  const alvo = cotas(PESOS, total);
+  const disponivel: Record<number, number> = {};
+  for (const qs of elegiveis) for (const q of qs) {
+    if (q.dominio !== null) disponivel[q.dominio] = (disponivel[q.dominio] ?? 0) + 1;
+  }
+
+  let melhor: Questao[][] | null = null;
+  let menorDesvio = Infinity;
+  for (let a = 0; a < elegiveis.length; a++)
+    for (let b = a + 1; b < elegiveis.length; b++)
+      for (let c = b + 1; c < elegiveis.length; c++)
+        for (let d = c + 1; d < elegiveis.length; d++) {
+          const grupo = [elegiveis[a], elegiveis[b], elegiveis[c], elegiveis[d]];
+          if (grupo.reduce((n, qs) => n + qs.length, 0) !== total) continue;
+          const contagem: Record<number, number> = {};
+          for (const qs of grupo) for (const q of qs) {
+            if (q.dominio !== null) contagem[q.dominio] = (contagem[q.dominio] ?? 0) + 1;
+          }
+          const desvio = Object.entries(alvo).reduce(
+            (n, [dominio, quota]) => n + Math.abs(quota - (contagem[Number(dominio)] ?? 0)), 0,
+          );
+          if (desvio < menorDesvio || (desvio === menorDesvio && rng() < 0.5)) {
+            melhor = grupo;
+            menorDesvio = desvio;
+          }
+        }
+  if (!melhor) return null;
+  const questoes = embaralhar(melhor, rng).flat();
+  const porDominio: Record<number, number> = {};
+  for (const q of questoes) if (q.dominio !== null) {
+    porDominio[q.dominio] = (porDominio[q.dominio] ?? 0) + 1;
+  }
+  const deficit: Record<number, number> = {};
+  for (const [dominio, quota] of Object.entries(alvo)) {
+    const falta = quota - (porDominio[Number(dominio)] ?? 0);
+    if (falta > 0) deficit[Number(dominio)] = falta;
+  }
+  return { questoes, cotas: alvo, disponivel, porDominio, deficit };
+}

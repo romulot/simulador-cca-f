@@ -23,7 +23,7 @@ export interface GrupoResumo {
 
 export interface RespostaCatalogo {
   grupos: GrupoResumo[];
-  casoPilotoDisponivel?: boolean;
+  casos?: Array<{ nome: string; rotulo: string; questoes: number }>;
   totais: {
     pares: number;
     paresValidos: number;
@@ -39,8 +39,8 @@ export async function GET(request: Request): Promise<Response> {
   const curso: CursoId = cursoParam ?? "curso-antigo";
 
   const pares = descobrir(raizDoCurso(curso));
-  const avulsas = pares.filter((p) => p.nome !== "caso-atendimento");
-  const casoPiloto = pares.find((p) => p.nome === "caso-atendimento");
+  const avulsas = pares.filter((p) => !p.nome.startsWith("caso-"));
+  const casos = pares.filter((p) => p.nome.startsWith("caso-") && p.erro === null);
 
   // Trilha "Exame Avançado" nunca revela domínio ao candidato (ver Tarefa 8
   // do plano): os 5 pares desse curso são 1:1 com um domínio (mesmo nome de
@@ -76,7 +76,11 @@ export async function GET(request: Request): Promise<Response> {
   const validas = avulsas.filter((p) => p.erro === null);
   const resposta: RespostaCatalogo = {
     grupos,
-    casoPilotoDisponivel: curso === "exame-avancado" && casoPiloto?.erro === null,
+    casos: curso === "exame-avancado" ? casos.map((p) => ({
+      nome: p.nome,
+      rotulo: p.nome.replace(/^caso-/, "").replaceAll("-", " "),
+      questoes: p.questoes.length,
+    })) : undefined,
     totais: {
       pares: avulsas.length,
       paresValidos: validas.length,

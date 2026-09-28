@@ -69,6 +69,7 @@ export interface QuestaoSimulado {
 /** Resultado intermediário de `parseGabarito`, por questão. */
 export interface QuestaoGabarito {
   numero: number;
+  dominio?: number;
   correta: Letra;
   resumo: string;
   explicacoes: AlternativasPorLetra;

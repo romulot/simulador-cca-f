@@ -87,6 +87,33 @@ describe("POST /api/rodadas", () => {
     expect(somaCotas).toBe(60);
   });
 
+  it("Exame Avançado monta 60 questões em quatro casos completos e cotas exatas", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "prova", curso: "exame-avancado" }));
+    expect(resposta.status).toBe(201);
+    const corpo = await resposta.json();
+    expect(corpo.totalQuestoes).toBe(60);
+    expect(corpo.composicao.porDominio).toEqual({ 1: 16, 2: 11, 3: 12, 4: 12, 5: 9 });
+    expect(corpo.composicao.deficit).toEqual({});
+    expect(corpo.questaoAtual.casoBase).toBeTruthy();
+    expect(corpo.questaoAtual).not.toHaveProperty("correta");
+
+    const { carregarRodada } = await import("@/db/repositorioRodadas");
+    const { obterConexao } = await import("@/db/conexao");
+    const persistida = (await carregarRodada(await obterConexao(), corpo.rodadaId, userId))!;
+    const perguntas = persistida.estado.questoes;
+    const grupos = perguntas.reduce<typeof perguntas[]>((acc, q) => {
+      if (!acc.length || acc[acc.length - 1][0].casoBase !== q.casoBase) acc.push([]);
+      acc[acc.length - 1].push(q);
+      return acc;
+    }, []);
+    expect(grupos).toHaveLength(4);
+    expect(grupos.map((g) => g.length).sort((a, b) => a - b)).toEqual([10, 15, 15, 20]);
+    for (const grupo of grupos) {
+      expect(grupo.map((q) => q.numero)).toEqual(Array.from({ length: grupo.length }, (_, i) => i + 1));
+    }
+  });
+
   it("modo aleatório cria a quantidade exata sem repetição nem vazamento de gabarito", async () => {
     const { POST } = await import("./route");
     const resposta = await POST(requisicao({ modo: "aleatorio", quantidade: 25 }));
