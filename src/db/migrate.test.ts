@@ -74,6 +74,7 @@ describe("migrate", () => {
       "segundos",
       "topicos_json",
       "arquetipos_json",
+      "caso_base",
     ]);
   });
 
