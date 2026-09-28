@@ -107,6 +107,23 @@ describe("POST /api/rodadas", () => {
     expect(new Set(chaves).size).toBe(25);
   });
 
+  it("caso piloto é avaliativo e mantém dez questões em sequência com o texto base persistido", async () => {
+    const { POST } = await import("./route");
+    const resposta = await POST(requisicao({ modo: "aleatorio", caso: "caso-atendimento", curso: "exame-avancado" }));
+    expect(resposta.status).toBe(201);
+    const corpo = await resposta.json();
+    expect(corpo.totalQuestoes).toBe(10);
+    expect(corpo.limiteSegundos).toBe(20 * 60);
+    expect(corpo.questaoAtual.casoBase).toContain("stateless workers");
+    expect(corpo.questaoAtual).not.toHaveProperty("correta");
+
+    const { carregarRodada } = await import("@/db/repositorioRodadas");
+    const { obterConexao } = await import("@/db/conexao");
+    const persistida = (await carregarRodada(await obterConexao(), corpo.rodadaId, userId))!;
+    expect(persistida.estado.questoes.map((q) => q.numero)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(persistida.estado.questoes.every((q) => q.casoBase === corpo.questaoAtual.casoBase)).toBe(true);
+  });
+
   it("modo aleatório rejeita quantidade ausente, não inteira ou não positiva", async () => {
     const { POST } = await import("./route");
     for (const corpo of [

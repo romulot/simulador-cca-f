@@ -127,7 +127,7 @@ function TelaSelecao() {
       const resposta = await fetch("/api/rodadas", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ modo: "pratica", pares: ["caso-atendimento"], curso }),
+        body: JSON.stringify({ modo: "aleatorio", caso: "caso-atendimento", curso }),
       });
       const corpo = await resposta.json();
       if (!resposta.ok) throw new Error(corpo.erro ?? "não foi possível iniciar o caso");
@@ -157,7 +157,7 @@ function TelaSelecao() {
           {grupos !== null && (
             <div className="painel pilha">
               <h2>Caso piloto — agente de atendimento</h2>
-              <p className="texto-fraco">10 decisões sobre um mesmo sistema. O texto base permanece disponível durante toda a rodada.</p>
+              <p className="texto-fraco">10 decisões sobre um mesmo sistema, 20 minutos e correção ao finalizar. O texto base permanece disponível durante toda a rodada.</p>
               <button type="button" className="botao botao-primario" disabled={iniciando || !casoPilotoDisponivel} onClick={iniciarCasoPiloto}>
                 {iniciando ? "Iniciando…" : "Iniciar caso piloto"}
               </button>
