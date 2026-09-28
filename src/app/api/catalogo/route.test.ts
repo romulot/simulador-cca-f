@@ -36,6 +36,7 @@ describe("GET /api/catalogo", () => {
     expect(corpo.grupos[0].pares[0].nome).not.toMatch(/dominio/);
     expect(corpo.grupos[0].pares[0].totalQuestoes).toBe(300);
     expect(corpo.totais.questoes).toBe(300);
+    expect(corpo.casos.map((c: { questoes: number }) => c.questoes).sort((a: number, b: number) => a - b)).toEqual([10, 15, 15, 20]);
   });
 
   it("'curso' desconhecido retorna 400", async () => {

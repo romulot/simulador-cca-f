@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { cotas, pool, sortear, PESOS, TOTAL_PROVA, type Rng } from "./sorteio";
+import { cotas, pool, sortear, sortearCasos, PESOS, TOTAL_PROVA, type Rng } from "./sorteio";
 import type { Questao } from "@/lib/parser/tipos";
 
 /** RNG determinístico (LCG) só para os testes: mesma semente, mesma
@@ -154,5 +154,29 @@ describe("sortear", () => {
     const sorteadoD3 = resultado.porDominio[3] ?? 0;
     const deficitD3 = resultado.deficit[3] ?? 0;
     expect(sorteadoD3 + deficitD3).toBe(resultado.cotas[3]);
+  });
+});
+
+
+describe("sortearCasos", () => {
+  it("preserva casos completos e a ordem das perguntas", () => {
+    const tamanhos = [10, 15, 15, 20];
+    const casos = tamanhos.map((tamanho, indice) =>
+      Array.from({ length: tamanho }, (_, numero) => ({
+        ...questaoFake(indice + 1, numero + 1), casoBase: `Caso ${indice}`,
+      })),
+    );
+    const resultado = sortearCasos(casos, rngDeterministico(42));
+    expect(resultado?.questoes).toHaveLength(60);
+    expect(resultado?.questoes.map((q) => q.casoBase).filter((base, i, todas) => i === 0 || base !== todas[i - 1])).toHaveLength(4);
+    for (const caso of casos) {
+      expect(resultado?.questoes.filter((q) => q.casoBase === caso[0].casoBase).map((q) => q.numero))
+        .toEqual(caso.map((q) => q.numero));
+    }
+  });
+
+  it("não monta prova com casos insuficientes", () => {
+    const caso = Array.from({ length: 10 }, (_, i) => ({ ...questaoFake(1, i + 1), casoBase: "Base" }));
+    expect(sortearCasos([caso], rngDeterministico(1))).toBeNull();
   });
 });

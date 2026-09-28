@@ -15,16 +15,27 @@ const BLOOM_VALIDOS = new Set(["Lembrar", "Aplicar", "Analisar", "Avaliar"]);
 const DIFICULDADE_VALIDAS = new Set(["Fácil", "Médio", "Difícil"]);
 
 describe("descobrir — corpus content/exame-avancado (Tarefas 5 e 6)", () => {
-  it("encontra 5 blocos avulsos e o caso piloto, todos válidos", () => {
+  it("encontra 5 blocos avulsos e 4 casos completos, todos válidos", () => {
     const pares = descobrir(RAIZ);
-    expect(pares).toHaveLength(6);
+    expect(pares).toHaveLength(9);
     expect(pares.every((p) => p.erro === null)).toBe(true);
 
     const totalQuestoes = pares.reduce((acc, p) => acc + p.questoes.length, 0);
-    expect(totalQuestoes).toBe(310);
+    expect(totalQuestoes).toBe(360);
     const caso = pares.find((p) => p.nome === "caso-atendimento");
     expect(caso?.questoes).toHaveLength(10);
     expect(caso?.questoes.every((q) => q.casoBase?.includes("stateless workers"))).toBe(true);
+  });
+
+  it("os quatro casos totalizam 60 questões nas cotas do exame", () => {
+    const casos = descobrir(RAIZ).filter((p) => p.nome.startsWith("caso-"));
+    expect(casos.map((p) => p.questoes.length).sort((a, b) => a - b)).toEqual([10, 15, 15, 20]);
+    const contagem = Object.fromEntries([1, 2, 3, 4, 5].map((d) => [d, 0]));
+    for (const caso of casos) {
+      expect(caso.questoes.every((q) => q.casoBase === caso.questoes[0].casoBase)).toBe(true);
+      for (const q of caso.questoes) contagem[q.dominio!]++;
+    }
+    expect(contagem).toEqual({ 1: 16, 2: 11, 3: 12, 4: 12, 5: 9 });
   });
 
   it("agrupa em 5 domínios internamente (dado de cálculo — nunca exibido nesta trilha, ver Tarefa 8)", () => {
@@ -72,7 +83,7 @@ describe("descobrir — corpus content/exame-avancado (Tarefas 5 e 6)", () => {
       }
     }
 
-    expect(totalErradas).toBe(930); // 310 questões × 3 alternativas erradas
-    expect(totalTageadas).toBeGreaterThanOrEqual(850); // ~99% coberto nesta curadoria
+    expect(totalErradas).toBe(1080); // 360 questões × 3 alternativas erradas
+    expect(totalTageadas).toBeGreaterThanOrEqual(850); // banco anterior continua curado; casos novos têm explicações individuais
   });
 });

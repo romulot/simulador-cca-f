@@ -36,7 +36,7 @@ function TelaSelecao() {
   const curso: CursoId = cursoParam && cursoIdValido(cursoParam) ? cursoParam : "exame-avancado";
 
   const [grupos, setGrupos] = useState<GrupoResumo[] | null>(null);
-  const [casoPilotoDisponivel, setCasoPilotoDisponivel] = useState(false);
+  const [casos, setCasos] = useState<Array<{ nome: string; rotulo: string; questoes: number }>>([]);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [iniciando, setIniciando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -45,7 +45,7 @@ function TelaSelecao() {
   useEffect(() => {
     fetch(`/api/catalogo?curso=${curso}`)
       .then((r) => r.json())
-      .then((corpo) => { setGrupos(corpo.grupos); setCasoPilotoDisponivel(corpo.casoPilotoDisponivel === true); });
+      .then((corpo) => { setGrupos(corpo.grupos); setCasos(corpo.casos ?? []); });
   }, [curso]);
 
   function alternar(nome: string) {
@@ -120,14 +120,14 @@ function TelaSelecao() {
     }
   }
 
-  async function iniciarCasoPiloto() {
+  async function iniciarCaso(nome: string) {
     setIniciando(true);
     setErro(null);
     try {
       const resposta = await fetch("/api/rodadas", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ modo: "aleatorio", caso: "caso-atendimento", curso }),
+        body: JSON.stringify({ modo: "aleatorio", caso: nome, curso }),
       });
       const corpo = await resposta.json();
       if (!resposta.ok) throw new Error(corpo.erro ?? "não foi possível iniciar o caso");
@@ -156,18 +156,20 @@ function TelaSelecao() {
 
           {grupos !== null && (
             <div className="painel pilha">
-              <h2>Caso piloto — agente de atendimento</h2>
-              <p className="texto-fraco">10 decisões sobre um mesmo sistema, 20 minutos e correção ao finalizar. O texto base permanece disponível durante toda a rodada.</p>
-              <button type="button" className="botao botao-primario" disabled={iniciando || !casoPilotoDisponivel} onClick={iniciarCasoPiloto}>
-                {iniciando ? "Iniciando…" : "Iniciar caso piloto"}
-              </button>
+              <h2>Praticar por caso</h2>
+              <p className="texto-fraco">Cada caso mantém suas questões em sequência, com 2 minutos por questão e correção ao finalizar.</p>
+              {casos.map((caso) => (
+                <button key={caso.nome} type="button" className="botao" disabled={iniciando} onClick={() => iniciarCaso(caso.nome)}>
+                  {iniciando ? "Iniciando…" : `${caso.rotulo} — ${caso.questoes} questões`}
+                </button>
+              ))}
             </div>
           )}
           {grupos !== null && (
             <div className="painel pilha">
               <p className="texto-fraco">
-                Questões embaralhadas de todo o banco do Exame Avançado ({totalDisponivel}{" "}
-                disponíveis) — sem indicação de módulo, igual à prova real.
+                Questões avulsas embaralhadas do Exame Avançado ({totalDisponivel}{" "}
+                disponíveis). Para a prova completa com textos base, escolha o modo Prova no menu.
               </p>
               <label className="linha">
                 <span style={{ flex: 1 }}>Quantidade de questões</span>

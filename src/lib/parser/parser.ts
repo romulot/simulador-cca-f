@@ -48,7 +48,7 @@ const METADADOS_MARCADOR = /^\*\*Metadados\b/;
 // é uma string livre, é uma lista "letra=id"; por isso tem parsing próprio
 // (`parseLinhaArquetipos`) em vez de cair em `CAMPO_PARA_CHAVE`.
 const METADADO_CAMPO =
-  /^-\s*(Bloom|Dificuldade|Rubrica|Cenário|Princípio testado|Arquétipos)\s*(?:\(§?\d+\))?\s*:\s*(.*)$/;
+  /^-\s*(Bloom|Dificuldade|Rubrica|Cenário|Princípio testado|Arquétipos|Domínio)\s*(?:\(§?\d+\))?\s*:\s*(.*)$/;
 
 const CAMPO_PARA_CHAVE: Record<string, keyof MetadadosQuestao> = {
   Bloom: "bloom",
@@ -207,7 +207,7 @@ function parseMetadados(
   arquivo: string,
   numero: number,
   correta: Letra,
-): { metadados: MetadadosQuestao; arquetiposErrados: Partial<Record<Letra, string>> } {
+): { metadados: MetadadosQuestao; arquetiposErrados: Partial<Record<Letra, string>>; dominio?: number } {
   const marcador = corpo.findIndex((l) => METADADOS_MARCADOR.test(l.trim()));
   if (marcador === -1) {
     throw new FormatoInvalido(arquivo, numero, "bloco de metadados ausente");
@@ -216,6 +216,7 @@ function parseMetadados(
   const campos: Partial<Record<keyof MetadadosQuestao, string>> = {};
   let arquetiposErrados: Partial<Record<Letra, string>> = {};
   let arquetiposVistos = false;
+  let dominio: number | undefined;
   for (let k = marcador + 1; k < corpo.length; k++) {
     const linha = corpo[k].trim();
     if (!linha) break;
@@ -228,6 +229,14 @@ function parseMetadados(
       }
       arquetiposVistos = true;
       arquetiposErrados = parseLinhaArquetipos(m[2].trim(), arquivo, numero, correta);
+      continue;
+    }
+    if (m[1] === "Domínio") {
+      const valor = Number(m[2].trim());
+      if (dominio !== undefined || !Number.isInteger(valor) || valor < 1 || valor > 5) {
+        throw new FormatoInvalido(arquivo, numero, "Domínio deve ser único e estar entre 1 e 5");
+      }
+      dominio = valor;
       continue;
     }
 
@@ -250,7 +259,7 @@ function parseMetadados(
     throw new FormatoInvalido(arquivo, numero, `faltam campos de metadados ${JSON.stringify(faltando)}`);
   }
 
-  return { metadados: campos as MetadadosQuestao, arquetiposErrados };
+  return { metadados: campos as MetadadosQuestao, arquetiposErrados, dominio };
 }
 
 /** Encontra e valida a linha "**Tópicos:** ..." de uma questão do gabarito.
@@ -334,10 +343,10 @@ export function parseGabarito(texto: string, arquivo = "<memória>"): QuestaoGab
       throw new FormatoInvalido(arquivo, numero, `explicações vazias ${JSON.stringify(vazias)}`);
     }
 
-    const { metadados, arquetiposErrados } = parseMetadados(corpo, arquivo, numero, correta);
+    const { metadados, arquetiposErrados, dominio } = parseMetadados(corpo, arquivo, numero, correta);
     const topicos = parseTopicos(corpo, arquivo, numero);
 
-    resultado.push({ numero, correta, resumo, explicacoes, metadados, topicos, arquetiposErrados });
+    resultado.push({ numero, correta, resumo, explicacoes, metadados, topicos, arquetiposErrados, dominio });
   }
 
   return resultado;
@@ -423,7 +432,7 @@ export function carregarPar(caminhoSimulado: string, caminhoGabarito: string): Q
     }
     questoes.push({
       origem: nome,
-      dominio,
+      dominio: g.dominio ?? dominio,
       numero: q.numero,
       enunciado: q.enunciado,
       casoBase: q.casoBase,

@@ -8,7 +8,7 @@ Migrado de um simulador em TUI (terminal) para uma aplicação web em Next.js, p
 
 - **Cadastro/login**: e-mail + senha, com recuperação por link temporário. Cada conta só enxerga o próprio histórico.
 - **Praticar**: escolha um ou mais simulados por domínio e responda no seu ritmo, sem limite de tempo.
-- **Modo prova**: 60 questões sorteadas automaticamente respeitando a proporção oficial de peso por domínio (1: 27% · 2: 18% · 3: 20% · 4: 20% · 5: 15%), limite de 2 horas. Se o corpus não tiver questões suficientes num domínio, a prova roda com menos questões — o déficit aparece na composição, nunca é compensado por outro domínio.
+- **Modo prova**: 60 questões em 2 horas. No Curso Antigo, sorteia questões avulsas conforme o peso dos domínios (1: 27% · 2: 18% · 3: 20% · 4: 20% · 5: 15%); faltas aparecem na composição. No Exame Avançado, apresenta quatro casos completos (10, 15, 15 e 20 questões), com texto base e situações que evoluem ao longo de cada caso, preservando exatamente as cotas 16/11/12/12/9 por domínio.
 - **Modo aleatório**: quantidade escolhida pelo candidato, sorteio uniforme sem repetição em todo o corpus, limite de 2 minutos por questão e correção somente ao finalizar.
 - **Resultado**: placar (com os dois jeitos de contar — sobre as questões respondidas e sobre o total), desempenho por domínio, desempenho por nível cognitivo (Bloom) e por dificuldade, revisão completa das questões erradas com explicação de cada alternativa.
 - **Histórico**: toda rodada finalizada fica salva (por conta) e pode ser reaberta depois.
